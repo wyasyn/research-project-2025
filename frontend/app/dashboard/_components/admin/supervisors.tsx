@@ -13,7 +13,7 @@ export default async function SupervisorsList() {
   }
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 grid sm:grid-cols-2 md:grid-cols-1 xl:grid-cols-2 gap-y-4 gap-x-8">
       {supervisors.map((supervisor) => (
         <UserView
           key={supervisor.id}

@@ -1,0 +1,32 @@
+{
+  "name": "research-project",
+  "version": "1.0.0",
+  "description": "Monorepo for the Face Recognition Attendance System (Next.js frontend & Flask backend).",
+  "scripts": {
+    "backend": "cd backend && conda run -n myenv python app.py",
+    "frontend": "cd frontend && npm run dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wyasyn/research-project-2025.git"
+  },
+  "keywords": [
+    "face-recognition",
+    "attendance",
+    "monorepo",
+    "nextjs",
+    "flask"
+  ],
+  "author": "Yasin Walum",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wyasyn/research-project-2025/issues"
+  },
+  "homepage": "https://github.com/wyasyn/research-project-2025#readme",
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "turbo": "^2.4.4"
+  },
+  "packageManager": "npm@10.9.2"
+}

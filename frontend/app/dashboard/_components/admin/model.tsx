@@ -44,7 +44,7 @@ export function Modal({
           <DialogTrigger asChild>
             <Button
               className="rounded-full"
-              variant="outline"
+              variant="default"
               size="icon"
               aria-label={title}
               title={title}

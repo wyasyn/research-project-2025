@@ -24,3 +24,6 @@ frontend/.swc/
 Thumbs.db
 .vscode/
 .idea/
+
+node_modules/
+.turbo

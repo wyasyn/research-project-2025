@@ -10,7 +10,7 @@ export default function UserView({
   email: string;
 }) {
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-3 bg-secondary p-3 rounded-lg border cursor-pointer hover:border-primary/35 duration-300 w-full">
       <img
         className="rounded-full aspect-square object-cover"
         src={image_url}
