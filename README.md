@@ -1,22 +1,34 @@
-# Face Recognition Attendance System - Frontend
+# Face Recognition Attendance System - Monorepo
 
-This is the frontend of the Face Recognition Attendance System built using **Next.js**. It allows users to register, track, and view their attendance using face recognition integrated with a backend system.
+This is the **monorepo** for the Face Recognition Attendance System, which consists of a **Next.js frontend** and a **Flask backend**. The system enables user registration, attendance tracking via face recognition, and viewing attendance records.
+
+## Monorepo Structure
+
+```plaintext
+face-recognition-monorepo/
+│── frontend/          # Next.js frontend
+│── backend/           # Flask backend
+│── .gitignore         # Global Git ignore for both projects
+│── package.json       # Root package.json (optional if using workspaces)
+│── README.md          # This documentation
+```
 
 ## Features
 
-- **User Registration**: Admins can register users with their name, email, and unique user ID (employee/student ID).
-- **Face Recognition**: Users can upload or take a photo for face recognition.
-- **Attendance Tracking**: Attendance is automatically recorded once per day via face recognition.
-- **Attendance Sheet**: Admins can view and download attendance sheets for each day as Excel files.
-- **Attendance Performance**: Logged-in users can view their attendance performance and details for a selected period.
+- **User Registration**: Admins can register users with their name, email, and unique user ID.
+- **Face Recognition**: Users upload or take a photo for face recognition.
+- **Attendance Tracking**: Attendance is recorded once per day via face recognition.
+- **Attendance Sheets**: Admins can view and download attendance sheets as Excel files.
+- **Attendance Performance**: Users can view their attendance records.
 - **User Dashboard**: Displays the list of present users for the selected day.
 
 ## Tech Stack
 
-- **Frontend**: Next.js, React
-- **Styling**: TailwindCSS
-- **API Communication**: Fetch for making requests to the backend
-- **Authentication**: JWT and cookie-based authentication
+- **Frontend**: Next.js, React, TailwindCSS
+- **Backend**: Flask, OpenCV, face-recognition
+- **Database**: SQLite/PostgreSQL (configurable)
+- **API Communication**: Fetch (frontend) & Flask REST API (backend)
+- **Authentication**: JWT & cookie-based authentication
 
 ## Installation
 
@@ -25,90 +37,91 @@ This is the frontend of the Face Recognition Attendance System built using **Nex
 Ensure you have the following installed:
 
 - [Node.js](https://nodejs.org/) (LTS version)
-- [Yarn](https://classic.yarnpkg.com/en/docs/install) (optional but recommended)
+- [Yarn](https://classic.yarnpkg.com/en/docs/install) or npm
+- [Python](https://www.python.org/) (3.x)
+- [pip](https://pip.pypa.io/en/stable/)
 
-### Steps to Setup
+### Setup
 
-1. Clone the repository:
-
-   ```bash
-   git clone https://github.com/wyasyn/research-project-frontend.git
-   cd research-project-frontend
-   ```
-
-2. Install dependencies:
+1. **Clone the repository**
 
    ```bash
-   yarn install
-   # or
-   npm install
+   git clone https://github.com/wyasyn/research-project-2025.git
+   cd face-recognition-monorepo
    ```
 
-3. Create a `.env.local` file in the root directory and add the following environment variables:
+2. **Set up the backend**
 
    ```bash
-   NEXT_PUBLIC_API_URL=http://localhost:5000 # URL to your backend API
-   NEXT_PUBLIC_FACE_RECOGNITION_API=http://localhost:5000/recognize # URL to your face recognition endpoint
+   cd backend
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   pip install -r requirements.txt
+   cp .env.example .env  # Set environment variables
+   python app.py  # Start the backend
    ```
 
-   Replace `http://localhost:5000` with the actual URL of your backend.
+   The backend will be available at `http://localhost:5000`.
 
-4. Run the development server:
+3. **Set up the frontend**
 
    ```bash
-   yarn dev
-   # or
-   npm run dev
+   cd ../frontend
+   yarn install  # or npm install
+   cp .env.local.example .env.local  # Set frontend environment variables
+   yarn dev  # or npm run dev
    ```
 
-   The application will be available at [http://localhost:3000](http://localhost:3000).
+   The frontend will be available at `http://localhost:3000`.
 
-## Pages and Components
+## Environment Variables
 
-### `/pages/index.js`
+### **Frontend (`.env.local` in `frontend/`)**
 
-- The homepage where users can log in or sign up.
+```plaintext
+NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_FACE_RECOGNITION_API=http://localhost:5000/recognize
+```
 
-### `/pages/register.js`
+### **Backend (`.env` in `backend/`)**
 
-- A page where admins can register new users.
+```plaintext
+FLASK_ENV=development
+SECRET_KEY=your_secret_key
+DATABASE_URL=sqlite:///attendance.db
+```
 
-### `/pages/attendance.js`
+## Pages and API Endpoints
 
-- A page that displays the attendance sheet for a selected day and allows users to view their attendance history.
+### **Frontend Pages (`frontend/pages/`)**
 
-### `/pages/dashboard.js`
+- `/` – Home/Login page
+- `/register` – Admin user registration
+- `/attendance` – View attendance sheets
+- `/dashboard` – User attendance performance
+- `/face-recognition` – Upload/take a photo for recognition
 
-- A page where logged-in users can see their attendance performance.
+### **Backend API Endpoints (`backend/app.py`)**
 
-### `/pages/face-recognition.js`
-
-- A page where users can upload or take a photo for face recognition. This will trigger the backend API to process the image and record attendance.
-
-## API Integration
-
-The frontend communicates with the backend using the following endpoints:
-
-- **User Registration**: `POST /api/register`
-- **Face Recognition**: `POST /api/recognize-face`
-- **Get Attendance**: `GET /api/attendance/{date}`
-- **Get All Attendance Sheets**: `GET /api/attendance-sheets`
-- **Download Attendance Sheet**: `GET /api/attendance-sheets/{date}/download`
-
-Refer to the backend documentation for more details on each API endpoint.
+- `POST /api/register` – Register a new user
+- `POST /api/recognize-face` – Face recognition for attendance
+- `GET /api/attendance/{date}` – Get attendance for a date
+- `GET /api/attendance-sheets` – List all attendance sheets
+- `GET /api/attendance-sheets/{date}/download` – Download attendance sheet
 
 ## Authentication
 
-Ensure that the backend is set up with the proper authentication (JWT, session cookies) to protect routes that require a logged-in user. The frontend sends the authentication token (if applicable) in the `Authorization` header with each request.
+- **Frontend**: Sends authentication token in `Authorization` headers.
+- **Backend**: Uses JWT for secure API calls.
 
 ## Troubleshooting
 
-- **Cannot connect to the backend**: Ensure your backend is running and accessible at the URL specified in the `.env.local` file.
-- **Face recognition not working**: Check if the correct image is being sent to the backend. Ensure that the backend is set up to process the image properly.
+- **Cannot connect to the backend**: Ensure Flask is running at `http://localhost:5000`.
+- **Face recognition not working**: Verify image format and ensure dependencies like OpenCV are installed.
 
 ## Contributing
 
-Feel free to fork the repository and create a pull request for any improvements or bug fixes.
+Fork the repository and submit a pull request for any improvements or bug fixes.
 
 ## License
 
