@@ -7,6 +7,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 import { usePathname, useRouter } from "next/navigation";
 import { ReactElement } from "react";
@@ -33,10 +34,16 @@ export default function NavItem({
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
-            variant={isActive ? "default" : "ghost"}
+            variant="ghost"
             size="icon"
             aria-label="Home"
             onClick={() => router.push(link)}
+            className={cn(
+              "duration-300 transition-all",
+              isActive
+                ? "text-primary hover:text-primary/75"
+                : "text-muted-foreground hover:text-foreground/75"
+            )}
           >
             {icon}
           </Button>
