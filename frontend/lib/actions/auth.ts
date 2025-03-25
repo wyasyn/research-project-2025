@@ -1,7 +1,9 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -50,6 +52,7 @@ export async function login({
       sameSite: "strict",
       path: "/",
     });
+    revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
     console.error("Login error:", error);
@@ -61,6 +64,7 @@ export async function logout() {
   try {
     const cookieStore = await cookies();
     cookieStore.delete("token");
+    revalidatePath("/dashboard");
     return { success: true };
   } catch (error) {
     console.error("Logout error:", error);
@@ -68,7 +72,7 @@ export async function logout() {
   }
 }
 
-export async function verifyToken() {
+export const verifyToken = cache(async () => {
   try {
     const cookieStore = await cookies();
     const tokenObj = cookieStore.get("token");
@@ -100,7 +104,14 @@ export async function verifyToken() {
 
     const data = await response.json();
 
-    const { user_id, role, message, error } = data;
+    interface UserData {
+      user_id: string;
+      role: "admin" | "supervisor" | "user";
+      message: string;
+      error: string;
+    }
+
+    const { user_id, role, message, error }: UserData = data;
 
     if (error) {
       return { error };
@@ -114,9 +125,9 @@ export async function verifyToken() {
     console.error("Token verification error:", error);
     return { error: "An unexpected error occurred during token verification" };
   }
-}
+});
 
-export async function getUserData() {
+export const getUserData = cache(async () => {
   try {
     const cookieStore = await cookies();
     const tokenObj = cookieStore.get("token");
@@ -156,4 +167,4 @@ export async function getUserData() {
     console.error("User data fetch error:", error);
     return { error: "An unexpected error occurred during user data fetch" };
   }
-}
+});

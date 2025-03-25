@@ -24,10 +24,7 @@ export default function NavItem({
   const router = useRouter();
   const pathname = usePathname();
 
-  const isActive =
-    link === "/dashboard"
-      ? pathname === "/dashboard"
-      : pathname.startsWith(link);
+  const isActive = pathname === link;
 
   return (
     <TooltipProvider delayDuration={0}>

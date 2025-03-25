@@ -4,6 +4,7 @@ import { PanelRightOpen } from "lucide-react";
 import ModeToggle from "./mode-toggle";
 import { Button } from "./ui/button";
 import { useSidebar } from "@/providers/sidebar-provider";
+import Search from "./search";
 
 export default function DashboardHomeHeader() {
   const { toggleSidebar } = useSidebar();
@@ -20,8 +21,7 @@ export default function DashboardHomeHeader() {
         <PanelRightOpen size={16} aria-hidden="true" />
       </Button>
       <div className="flex items-center gap-3">
-        {/* TODO: Search */}
-        <div>search</div>
+        <Search />
         <ModeToggle />
       </div>
     </header>

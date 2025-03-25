@@ -1,4 +1,4 @@
-import { Binoculars, Logs, Users } from "lucide-react";
+import { ChartPie, Shield, Users } from "lucide-react";
 import AdminOverviewCard from "./overview-card";
 import { getStats } from "@/lib/actions/users";
 
@@ -14,7 +14,7 @@ export default async function OverviewStats() {
       {/* Add admin overview cards here */}
 
       <AdminOverviewCard
-        icon={<Binoculars />}
+        icon={<Shield />}
         title="Supervisors"
         count={num_supervisors ?? 0}
       />
@@ -23,7 +23,11 @@ export default async function OverviewStats() {
         title="Users"
         count={num_staff ?? 0}
       />
-      <AdminOverviewCard icon={<Logs />} title="Logs" count={num_logs ?? 0} />
+      <AdminOverviewCard
+        icon={<ChartPie />}
+        title="Logs"
+        count={num_logs ?? 0}
+      />
     </div>
   );
 }

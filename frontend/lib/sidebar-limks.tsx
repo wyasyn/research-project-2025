@@ -1,9 +1,9 @@
-import { Users, Building, LayoutDashboard, User } from "lucide-react";
+import { Users, Building, LayoutDashboard, Shield } from "lucide-react";
 export const adminSidebarLinks = [
   {
     name: "Dashboard",
     icon: <LayoutDashboard size={24} aria-hidden="true" />,
-    link: "/dashboard",
+    link: "/dashboard/admin",
   },
   {
     name: "Organization",
@@ -12,7 +12,7 @@ export const adminSidebarLinks = [
   },
   {
     name: "Supervisors",
-    icon: <User size={24} aria-hidden="true" />,
+    icon: <Shield size={24} aria-hidden="true" />,
     link: "/dashboard/admin/supervisors",
   },
   {
