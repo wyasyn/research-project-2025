@@ -22,6 +22,14 @@ interface UserResponse {
   error?: string;
 }
 
+interface UserResult {
+  id: number;
+  name: string;
+  email: string;
+  role: "admin" | "supervisor" | "user";
+  image_url: string;
+}
+
 export const getSupervisors = cache(async (): Promise<UserResponse> => {
   try {
     const cookieStore = await cookies();
@@ -165,7 +173,13 @@ export const searchUser = cache(async (query: string) => {
     }
 
     const data = await response.json();
-    return { users: data.users };
+
+    if (data.error) {
+      return { error: data.error };
+    }
+
+    const users: UserResult[] = data.users;
+    return { users: users };
   } catch (error) {
     console.error(error);
     return { error: error instanceof Error ? error.message : String(error) };

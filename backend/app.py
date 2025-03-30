@@ -47,7 +47,7 @@ def health_check():
 
 @app.errorhandler(404)
 def page_not_found(e):
-    return jsonify({"message": "Page not found", "message": str(e)}), 404
+    return jsonify({"message": "Page not found", "error": str(e)}), 404
 
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")

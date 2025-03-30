@@ -17,8 +17,8 @@ class User(db.Model):
     password_hash = db.Column(db.String(255), nullable=False)  # Hashed password
     image_url = db.Column(db.String(255), nullable=True)  # Stores profile image URL
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
-    role = db.Column(db.Enum('admin', 'supervisor', 'user', name='user_roles'), nullable=False, default='student')
-    sessions_created = db.relationship('AttendanceSession', backref='creator', lazy=True)
+    role = db.Column(db.Enum('admin', 'supervisor', 'user', name='user_roles'), nullable=False, default='user')
+    attendance_sessions = db.relationship('AttendanceSession', backref='creator', lazy=True)  # Renamed for clarity
     records = db.relationship('AttendanceRecord', backref='user', lazy=True)
 
     def set_password(self, password):
@@ -31,7 +31,7 @@ class AttendanceSession(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     description = db.Column(db.Text, nullable=True)
-    date = db.Column(db.Date, default=datetime.now(timezone.utc).date())
+    date = db.Column(db.Date, default=lambda: datetime.now(timezone.utc).date())
     organization_id = db.Column(db.Integer, db.ForeignKey('organization.id'), nullable=False)
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Created by admin/supervisor
     records = db.relationship('AttendanceRecord', backref='session', cascade="all, delete-orphan", lazy=True)
@@ -39,6 +39,6 @@ class AttendanceSession(db.Model):
 class AttendanceRecord(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     session_id = db.Column(db.Integer, db.ForeignKey('attendance_session.id'), nullable=False)
-    user_id = db.Column(db.String(50), db.ForeignKey('user.user_id'), nullable=False)  # Foreign key references user_id
-    timestamp = db.Column(db.DateTime, default=datetime.now(timezone.utc))
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)  # Matches User.id
+    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))  # Ensures dynamic execution
     __table_args__ = (db.UniqueConstraint('session_id', 'user_id', name='unique_attendance_record'),)

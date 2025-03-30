@@ -10,43 +10,6 @@ import os
 user_bp = Blueprint('user', __name__)
 
 # Get paginated users filtered by organization
-@user_bp.route('/', methods=["GET"])
-@jwt_required()
-def get_all_users():
-    try:
-        current_user_id = get_jwt_identity()
-        current_user = User.query.get(current_user_id)
-        if not current_user:
-            return jsonify({"message": "Unauthorized access."}), 403
-
-        page = int(request.args.get("page", 1))
-        per_page = int(request.args.get("per_page", 10))
-
-        users_query = User.query.filter_by(organization_id=current_user.organization_id)
-        pagination = users_query.paginate(page=page, per_page=per_page, error_out=False)
-
-        users_list = [
-            {
-                "id": user.id,
-                "user_id": user.user_id,
-                "name": user.name,
-                "email": user.email,
-                "image_url": user.image_url,
-                "role": user.role,
-            }
-            for user in pagination.items
-        ]
-
-        return jsonify({
-            "users": users_list,
-            "page": pagination.page,
-            "per_page": pagination.per_page,
-            "total_pages": pagination.pages,
-            "total_users": pagination.total,
-        }), 200
-    except Exception as e:
-        current_app.logger.error(f"Error fetching users: {e}")
-        return jsonify({"message": "An error occurred while fetching users."}), 500
 
 
 # Get a user's attendance (filtered by organization)
@@ -63,7 +26,7 @@ def get_user_attendance(user_id):
     per_page = int(request.args.get("per_page", 10))
 
     attendance_query = AttendanceRecord.query.join(AttendanceSession).filter(
-        AttendanceRecord.user_id == user_id, AttendanceSession.organization_id == current_user.organization_id
+        AttendanceRecord.user_id == user.id, AttendanceSession.organization_id == current_user.organization_id
     )
     pagination = attendance_query.paginate(page=page, per_page=per_page, error_out=False)
 
@@ -94,7 +57,7 @@ def delete_user(user_id):
     if not user:
         return jsonify({"message": "User not found or not in your organization."}), 404
 
-    AttendanceRecord.query.filter_by(user_id=user_id).delete()
+    AttendanceRecord.query.filter_by(user_id=user.id).delete()
     db.session.delete(user)
     db.session.commit()
     return jsonify({"message": "User and associated attendance records deleted successfully!"})
@@ -147,7 +110,7 @@ def get_user_details():
     current_user_id = get_jwt_identity()
     
     # Fetch user by user_id instead of id
-    user = User.query.filter_by(user_id=current_user_id).first()
+    user = User.query.filter_by(current_user_id).first()
     
     if not user:
         return jsonify({"error": "User not found."}), 404
@@ -165,7 +128,7 @@ def get_user_details():
 @jwt_required()
 def get_supervisors():
     current_user_id = get_jwt_identity()
-    current_user = User.query.filter_by(user_id=str(current_user_id)).first()
+    current_user = User.query.filter_by(current_user_id).first()
 
     if not current_user:
         return jsonify({"error": "User not found"}), 404
@@ -198,7 +161,7 @@ def get_supervisors():
 @jwt_required()
 def get_staff():
     current_user_id = get_jwt_identity()
-    current_user = User.query.filter_by(user_id=str(current_user_id)).first()
+    current_user = User.query.filter_by(current_user_id).first()
 
     if not current_user:
         return jsonify({"error": "User not found"}), 404
@@ -231,7 +194,7 @@ def get_staff():
 @jwt_required()
 def get_logs():
     current_user_id = get_jwt_identity()
-    current_user = User.query.filter_by(user_id=current_user_id).first()
+    current_user = User.query.filter_by(current_user_id).first()
     logs = AttendanceRecord.query.join(AttendanceSession).filter(AttendanceSession.organization_id == current_user.organization_id).all()
     logs_list = [
         {
@@ -249,7 +212,7 @@ def get_logs():
 @jwt_required()
 def get_organization_stats():
     current_user_id = get_jwt_identity()
-    current_user = User.query.filter_by(user_id=current_user_id).first()
+    current_user = User.query.filter_by(current_user_id).first()
     
     if not current_user:
         return jsonify({"error": "User not found"}), 404
@@ -287,6 +250,7 @@ def search_user():
             "name": user.name,
             "email": user.email,
             "image_url": user.image_url,
+            "role": user.role,
         }
         for user in users
     ]

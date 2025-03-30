@@ -1,11 +1,10 @@
+from datetime import timedelta
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import get_jwt, get_jwt_identity, jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 from models import User, Organization
 from config import SECRET_KEY, db
-import jwt
-from jwt import ExpiredSignatureError, InvalidTokenError
 
-from utils.auth_utils import generate_jwt_token
+from utils.auth_utils import generate_jwt_tokens
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -26,19 +25,13 @@ def register():
         image_url = data.get("image_url")
         role = data.get("role", "user")
 
-        # Check if the user ID already exists
         if User.query.filter_by(user_id=user_id).first():
             return jsonify({"message": "User ID already exists."}), 400
-
-        # Check if the email already exists
         if User.query.filter_by(email=email).first():
             return jsonify({"message": "Email already exists."}), 400
-
-        # Check if the organization ID is valid
         if not Organization.query.get(organization_id):
             return jsonify({"message": "Invalid organization ID."}), 404
 
-        # Create new user
         new_user = User(
             user_id=user_id,
             name=name,
@@ -47,44 +40,47 @@ def register():
             organization_id=organization_id,
             role=role
         )
-        new_user.set_password(password)  # Hash password securely
+        new_user.set_password(password)
 
-        # Add user to the database
         db.session.add(new_user)
         db.session.commit()
 
-        # Generate JWT token
-        token = generate_jwt_token(new_user)
+        # Generate Access and Refresh Tokens
+        access_token, refresh_token = generate_jwt_tokens(new_user)
 
-        return jsonify({"message": "User registered successfully!", "access_token": token}), 201
+        return jsonify({
+            "message": "User registered successfully!",
+            "access_token": access_token,
+            "refresh_token": refresh_token
+        }), 201
 
     except Exception as e:
         current_app.logger.error(f"Registration error: {e}")
         return jsonify({"message": "An error occurred during registration."}), 500
 
 
-# Login route
+# Login Route
 @auth_bp.route('/login', methods=['POST'])
 def login():
     try:
         data = request.get_json()
         email, password = data.get("email"), data.get("password")
 
-        # Check if email and password are provided
         if not email or not password:
             return jsonify({"error": "Email and password are required."}), 400
 
-        # Query the user by email
         user = User.query.filter_by(email=email).first()
-
-        # Check if user exists and password is correct
         if not user or not user.check_password(password):
             return jsonify({"error": "Invalid credentials."}), 401
 
-        # Generate JWT token
-        token = generate_jwt_token(user)
+        # Generate Access and Refresh Tokens
+        access_token, refresh_token = generate_jwt_tokens(user)
 
-        return jsonify({"message": "Login successful", "access_token": token}), 200
+        return jsonify({
+            "message": "Login successful",
+            "access_token": access_token,
+            "refresh_token": refresh_token
+        }), 200
 
     except Exception as e:
         current_app.logger.error(f"Login error: {e}")
@@ -93,21 +89,18 @@ def login():
 
 
 
-# Token Verification Route
-@auth_bp.route("/token-verify", methods=["GET"])
-@jwt_required()  # Ensures that the token is required and valid
-def verify_token():
-    """Endpoint to verify JWT token using Flask-JWT-Extended"""
-    try:
-        user_id = get_jwt_identity()  # Extract user identity (user_id)
-        claims = get_jwt()  # Extract additional claims
 
-        return jsonify({
-            "message": "Token is valid!",
-            "user_id": user_id,
-            "role": claims.get("role"),  # Extract role claim
-            "exp": claims.get("exp")  # Expiration timestamp
-        }), 200
+@auth_bp.route("/refresh", methods=["POST"])
+@jwt_required(refresh=True) 
+def refresh():
+    """
+    Generates a new access token using a valid refresh token.
+    """
+    user_id = get_jwt_identity()  # Get the user_id from the refresh token
 
-    except Exception as e:
-        return jsonify({"error": f"Token verification failed: {str(e)}"}), 500
+    new_access_token = create_access_token(
+        identity=user_id,
+        expires_delta=timedelta(days=7)  # New 7-day token
+    )
+
+    return jsonify({"access_token": new_access_token}), 200
