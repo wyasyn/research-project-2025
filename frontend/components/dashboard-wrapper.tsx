@@ -13,7 +13,7 @@ export default function DashboardWrapper({
     <div
       className={cn(
         "duration-300 transition-all px-1 md:px-12",
-        isOpen ? "ml-[55px]" : ""
+        isOpen ? "ml-[70px]" : ""
       )}
     >
       {children}

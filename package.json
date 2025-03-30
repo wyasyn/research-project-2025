@@ -25,6 +25,7 @@
   },
   "homepage": "https://github.com/wyasyn/research-project-2025#readme",
   "devDependencies": {
+    "@types/lodash": "^4.17.16",
     "concurrently": "^8.2.0",
     "turbo": "^2.4.4"
   },

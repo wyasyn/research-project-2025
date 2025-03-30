@@ -32,16 +32,25 @@ export default function NavItem({
         <TooltipTrigger asChild>
           <Button
             variant="ghost"
-            size="icon"
             aria-label="Home"
+            size={"lg"}
             onClick={() => router.push(link)}
             className={cn(
-              "duration-300 transition-all",
+              "duration-300 transition-all flex flex-col gap-1 items-center",
               isActive
                 ? "text-primary hover:text-primary/75"
                 : "text-muted-foreground hover:text-foreground/75"
             )}
           >
+            {isActive ? (
+              <div
+                className={cn(
+                  "w-1 h-1 rounded-full",
+                  isActive ? "bg-primary" : "bg-transparent"
+                )}
+              />
+            ) : null}
+
             {icon}
           </Button>
         </TooltipTrigger>

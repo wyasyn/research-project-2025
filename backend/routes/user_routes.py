@@ -1,6 +1,6 @@
 from flask import Blueprint, after_this_request, request, jsonify, current_app, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
-import pandas as pd
+from sqlalchemy.orm import load_only
 import tempfile
 from middleware import supervisor_required
 from models import AttendanceRecord, AttendanceSession, User, Organization
@@ -162,12 +162,23 @@ def get_user_details():
 
 
 # get all supervisors in an organization
-@user_bp.route("/supervisors", methods=["GET"])
 @jwt_required()
 def get_supervisors():
     current_user_id = get_jwt_identity()
-    current_user = User.query.filter_by(user_id=current_user_id).first()
-    supervisors = User.query.filter_by(organization_id=current_user.organization_id, role="supervisor").all()
+    current_user = User.query.filter_by(user_id=str(current_user_id)).first()
+
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+
+    if not current_user.organization_id:
+        return jsonify({"error": "User is not associated with an organization"}), 400
+
+    supervisors = (
+        User.query.filter_by(organization_id=current_user.organization_id, role="supervisor")
+        .options(load_only("id", "user_id", "name", "email", "image_url"))
+        .all()
+    )
+
     supervisors_list = [
         {
             "id": supervisor.id,
@@ -178,15 +189,29 @@ def get_supervisors():
         }
         for supervisor in supervisors
     ]
-    return jsonify({"supervisors": supervisors_list}), 200
+
+    return jsonify({"supervisors": supervisors_list, "organization_id": current_user.organization_id}), 200
+
 
 # get all users in an organization that are not supervisors or admins
 @user_bp.route("/staff", methods=["GET"])
 @jwt_required()
 def get_staff():
     current_user_id = get_jwt_identity()
-    current_user = User.query.filter_by(user_id=current_user_id).first()
-    staff = User.query.filter_by(organization_id=current_user.organization_id, role="user").all()
+    current_user = User.query.filter_by(user_id=str(current_user_id)).first()
+
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+
+    if not current_user.organization_id:
+        return jsonify({"error": "User is not associated with an organization"}), 400
+
+    staff = (
+        User.query.filter_by(organization_id=current_user.organization_id, role="user")
+        .options(load_only("id", "user_id", "name", "email", "image_url"))
+        .all()
+    )
+
     staff_list = [
         {
             "id": user.id,
@@ -197,7 +222,8 @@ def get_staff():
         }
         for user in staff
     ]
-    return jsonify({"staff": staff_list}), 200
+
+    return jsonify({"users": staff_list, "organization_id": current_user.organization_id}), 200
 
 
 # get all users logs in an organization
