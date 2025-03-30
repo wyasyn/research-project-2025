@@ -13,7 +13,7 @@ def generate_jwt_tokens(user):
     }
 
     access_token = create_access_token(
-        identity=user.user_id,  
+        identity=str(user.id),  
         additional_claims=additional_claims,
         expires_delta=timedelta(days=7)  # 7-day access token
     )

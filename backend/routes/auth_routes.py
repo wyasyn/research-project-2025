@@ -96,7 +96,7 @@ def refresh():
     """
     Generates a new access token using a valid refresh token.
     """
-    user_id = get_jwt_identity()  # Get the user_id from the refresh token
+    user_id = int(get_jwt_identity())  # Get the user_id from the refresh token
 
     new_access_token = create_access_token(
         identity=user_id,
@@ -104,3 +104,26 @@ def refresh():
     )
 
     return jsonify({"access_token": new_access_token}), 200
+
+
+# verify token 
+@auth_bp.route("/verify", methods=["GET"])
+@jwt_required()
+def verify_token():
+    user_id = int(get_jwt_identity()) 
+    
+    print(type(get_jwt_identity()), get_jwt_identity())
+
+
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"status": "error", "message": "User not found"}), 404
+
+    return jsonify({
+        "status": "success",
+        "data": {
+            "user_id": user.user_id,
+            "role": user.role
+        },
+        "message": "Token is valid"
+    }), 200

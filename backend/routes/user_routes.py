@@ -16,7 +16,7 @@ user_bp = Blueprint('user', __name__)
 @user_bp.route("/<user_id>", methods=["GET"])
 @jwt_required()
 def get_user_attendance(user_id):
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     current_user = User.query.get(current_user_id)
     user = User.query.filter_by(user_id=user_id, organization_id=current_user.organization_id).first()
     if not user:
@@ -51,7 +51,7 @@ def get_user_attendance(user_id):
 @jwt_required()
 @supervisor_required 
 def delete_user(user_id):
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     current_user = User.query.get(current_user_id)
     user = User.query.filter_by(user_id=user_id, organization_id=current_user.organization_id).first()
     if not user:
@@ -67,7 +67,7 @@ def delete_user(user_id):
 @user_bp.route("/edit/<int:id>", methods=["PUT"])
 @jwt_required()
 def edit_user(id):
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     current_user = User.query.get(current_user_id)
     user = User.query.filter_by(id=id, organization_id=current_user.organization_id).first()
     if not user:
@@ -107,27 +107,31 @@ def edit_user(id):
 @user_bp.route("/details", methods=["GET"])
 @jwt_required()
 def get_user_details():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     
     # Fetch user by user_id instead of id
     user = User.query.filter_by(current_user_id).first()
     
     if not user:
         return jsonify({"error": "User not found."}), 404
-
-    return jsonify({
-        "user_id": user.user_id,
+    
+    user = {
+          "user_id": user.user_id,
         "name": user.name,
         "email": user.email,
         "image_url": user.image_url,
         "role": user.role,
+    }
+
+    return jsonify({
+        "user": user
     }), 200
 
 
 # get all supervisors in an organization
 @jwt_required()
 def get_supervisors():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     current_user = User.query.filter_by(current_user_id).first()
 
     if not current_user:
@@ -160,7 +164,7 @@ def get_supervisors():
 @user_bp.route("/staff", methods=["GET"])
 @jwt_required()
 def get_staff():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     current_user = User.query.filter_by(current_user_id).first()
 
     if not current_user:
@@ -193,7 +197,7 @@ def get_staff():
 @user_bp.route("/logs", methods=["GET"])
 @jwt_required()
 def get_logs():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     current_user = User.query.filter_by(current_user_id).first()
     logs = AttendanceRecord.query.join(AttendanceSession).filter(AttendanceSession.organization_id == current_user.organization_id).all()
     logs_list = [
@@ -211,7 +215,7 @@ def get_logs():
 @user_bp.route("/stats", methods=["GET"])
 @jwt_required()
 def get_organization_stats():
-    current_user_id = get_jwt_identity()
+    current_user_id = int(get_jwt_identity())
     current_user = User.query.filter_by(current_user_id).first()
     
     if not current_user:

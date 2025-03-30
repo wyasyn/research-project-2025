@@ -185,3 +185,44 @@ export const searchUser = cache(async (query: string) => {
     return { error: error instanceof Error ? error.message : String(error) };
   }
 });
+
+export const getUser = async () => {
+  try {
+    const cookieStore = await cookies();
+    const tokenObj = cookieStore.get("token");
+
+    if (!tokenObj?.value) {
+      return { error: "Authentication token is missing." };
+    }
+
+    const response = await fetch(`${serverApi}/users/details`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tokenObj?.value}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return { error: `Failed to fetch user: ${response.statusText}` };
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      return { error: data.error };
+    }
+    const user = data.user as {
+      user_id: string;
+      name: string;
+      email: string;
+      image_url: string;
+      role: "admin" | "supervisor" | "user";
+    };
+    return { user: user };
+  } catch (error) {
+    console.error(error);
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+};
