@@ -10,9 +10,8 @@ stats_bp = Blueprint('stats', __name__)
 @jwt_required()
 def get_statistics():
     try:
-        # Get the authenticated user
-        user_id = get_jwt_identity()
-        user = User.query.get(user_id)
+        current_user_id = int(get_jwt_identity())
+        user = User.query.filter_by(current_user_id).first()
         if not user:
             return jsonify({"message": "User not found."}), 404
 

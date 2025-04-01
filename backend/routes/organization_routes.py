@@ -53,8 +53,25 @@ def delete_organization(org_id):
 @organization_bp.route('/details', methods=['GET'])
 @jwt_required()
 def get_organization_details():
-    current_user_id = get_jwt_identity()
-    user = User.query.filter_by(user_id=current_user_id).first()
+    current_user_id = int(get_jwt_identity())
+
+    # Correct query to fetch the user
+    user = User.query.filter_by(id=current_user_id).first()
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    if not user.organization_id:
+        return jsonify({'error': 'User does not belong to any organization'}), 403
+
+    # Fetch the organization
     organization = Organization.query.get_or_404(user.organization_id)
-    return jsonify({'organization': {'id': organization.id, 'name': organization.name, 'description': organization.description}}), 200
+
+    return jsonify({
+        'organization': {
+            'id': organization.id,
+            'name': organization.name,
+            'description': organization.description
+        }
+    }), 200
+
 

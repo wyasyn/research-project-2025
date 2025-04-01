@@ -14,6 +14,7 @@ interface User {
   name: string;
   email: string;
   image_url: string;
+  role: "admin" | "supervisor" | "user";
 }
 
 interface UserResponse {
@@ -30,95 +31,57 @@ interface UserResult {
   image_url: string;
 }
 
-export const getSupervisors = cache(async (): Promise<UserResponse> => {
-  try {
-    const cookieStore = await cookies();
-    const tokenObj = cookieStore.get("token");
+export const getUsers = cache(
+  async (role?: "supervisor" | "user"): Promise<UserResponse> => {
+    try {
+      const cookieStore = await cookies();
+      const tokenObj = cookieStore.get("token");
 
-    if (!tokenObj?.value) {
-      return { error: "Authentication token is missing." };
-    }
+      if (!tokenObj?.value) {
+        return { error: "Authentication token is missing." };
+      }
 
-    const response = await fetch(`${serverApi}/users/supervisors`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${tokenObj?.value}`,
-      },
-      credentials: "include",
-    });
+      // Construct URL dynamically to avoid role=undefined issue
+      const url = new URL(`${serverApi}/users`);
+      if (role) {
+        url.searchParams.append("role", role);
+      }
 
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      console.error("Non-JSON response received:", await response.text());
+      const response = await fetch(url.toString(), {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${tokenObj.value}`,
+        },
+      });
+
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.error("Non-JSON response received:", await response.text());
+        return {
+          error: `Unexpected response from server: ${response.status} ${response.statusText}`,
+        };
+      }
+
+      const data = await response.json();
+      if (!response.ok) {
+        return {
+          error: `Failed to fetch users: ${
+            data?.error || response.statusText || `Status ${response.status}`
+          }`,
+        };
+      }
+
       return {
-        error: `Unexpected response from server: ${response.status} ${response.statusText}`,
+        users: data.users,
+        organizationId: data.organization_id,
       };
+    } catch (error) {
+      console.error(error);
+      return { error: error instanceof Error ? error.message : String(error) };
     }
-
-    const data = await response.json();
-    if (!response.ok) {
-      return {
-        error: `Failed to fetch supervisors: ${
-          data.error || response.statusText
-        }`,
-      };
-    }
-
-    return {
-      users: data.supervisors,
-      organizationId: data.organization_id,
-      ...(data.error ? { error: data.error } : {}),
-    };
-  } catch (error) {
-    console.error(error);
-    return { error: error instanceof Error ? error.message : String(error) };
   }
-});
-
-export const getUsers = cache(async (): Promise<UserResponse> => {
-  try {
-    const cookieStore = await cookies();
-    const tokenObj = cookieStore.get("token");
-
-    if (!tokenObj?.value) {
-      return { error: "Authentication token is missing." };
-    }
-
-    const response = await fetch(`${serverApi}/users/staff`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${tokenObj?.value}`,
-      },
-      credentials: "include",
-    });
-
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.includes("application/json")) {
-      console.error("Non-JSON response received:", await response.text());
-      return {
-        error: `Unexpected response from server: ${response.status} ${response.statusText}`,
-      };
-    }
-
-    const data = await response.json();
-    if (!response.ok) {
-      return {
-        error: `Failed to fetch users: ${data.error || response.statusText}`,
-      };
-    }
-
-    return {
-      users: data.users,
-      organizationId: data.organization_id,
-      ...(data.error ? { error: data.error } : {}),
-    };
-  } catch (error) {
-    console.error(error);
-    return { error: error instanceof Error ? error.message : String(error) };
-  }
-});
+);
 
 export const getStats = cache(async () => {
   try {

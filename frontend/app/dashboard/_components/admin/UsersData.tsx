@@ -4,7 +4,7 @@ import { Modal } from "./model";
 import AddUserForm from "./add-user-form";
 
 export default async function UsersList() {
-  const { users, organizationId, error } = await getUsers();
+  const { users, organizationId, error } = await getUsers("user");
 
   if (error) {
     return <p>{error}</p>;

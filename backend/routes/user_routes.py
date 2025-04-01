@@ -1,15 +1,49 @@
-from flask import Blueprint, after_this_request, request, jsonify, current_app, send_file
+from flask import Blueprint, request, jsonify, current_app, send_file
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy.orm import load_only
-import tempfile
 from middleware import supervisor_required
 from models import AttendanceRecord, AttendanceSession, User, Organization
 from config import db
-import os
 
 user_bp = Blueprint('user', __name__)
 
-# Get paginated users filtered by organization
+
+from sqlalchemy.orm import load_only
+
+@user_bp.route("/", methods=["GET"])
+@jwt_required()
+def get_users():
+    current_user_id = int(get_jwt_identity())
+    current_user = User.query.filter_by(id=current_user_id).first()
+    
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
+    
+    role = request.args.get("role", "").strip().lower()  # Optional role filter
+    
+    users_query = User.query.filter(User.organization_id == current_user.organization_id)
+    if role:
+        users_query = users_query.filter(User.role == role)
+
+    # Correct usage of load_only()
+    users = users_query.options(load_only(User.id, User.user_id, User.name, User.email, User.image_url, User.role)).all()
+    
+    return jsonify({
+        "users": [
+            {
+                "id": user.id,
+                "user_id": user.user_id,
+                "name": user.name,
+                "email": user.email,
+                "image_url": user.image_url,
+                "role": user.role,
+            }
+            for user in users
+        ],
+        "organization_id": current_user.organization_id  # Include organization ID for context
+    }), 200
+
+
 
 
 # Get a user's attendance (filtered by organization)
@@ -90,8 +124,8 @@ def edit_user(id):
         user.name = name
     if email:
         user.email = email
-    if user_id:
-        user.user_id = user_id
+    if user_id and current_user.role == "supervisor":
+        user.user_id = user_id 
     if image_url:
         user.image_url = image_url
 
@@ -109,8 +143,7 @@ def edit_user(id):
 def get_user_details():
     current_user_id = int(get_jwt_identity())
     
-    # Fetch user by user_id instead of id
-    user = User.query.filter_by(current_user_id).first()
+    user = User.query.filter_by(id=current_user_id).first()
     
     if not user:
         return jsonify({"error": "User not found."}), 404
@@ -128,69 +161,6 @@ def get_user_details():
     }), 200
 
 
-# get all supervisors in an organization
-@jwt_required()
-def get_supervisors():
-    current_user_id = int(get_jwt_identity())
-    current_user = User.query.filter_by(current_user_id).first()
-
-    if not current_user:
-        return jsonify({"error": "User not found"}), 404
-
-    if not current_user.organization_id:
-        return jsonify({"error": "User is not associated with an organization"}), 400
-
-    supervisors = (
-        User.query.filter_by(organization_id=current_user.organization_id, role="supervisor")
-        .options(load_only("id", "user_id", "name", "email", "image_url"))
-        .all()
-    )
-
-    supervisors_list = [
-        {
-            "id": supervisor.id,
-            "user_id": supervisor.user_id,
-            "name": supervisor.name,
-            "email": supervisor.email,
-            "image_url": supervisor.image_url,
-        }
-        for supervisor in supervisors
-    ]
-
-    return jsonify({"supervisors": supervisors_list, "organization_id": current_user.organization_id}), 200
-
-
-# get all users in an organization that are not supervisors or admins
-@user_bp.route("/staff", methods=["GET"])
-@jwt_required()
-def get_staff():
-    current_user_id = int(get_jwt_identity())
-    current_user = User.query.filter_by(current_user_id).first()
-
-    if not current_user:
-        return jsonify({"error": "User not found"}), 404
-
-    if not current_user.organization_id:
-        return jsonify({"error": "User is not associated with an organization"}), 400
-
-    staff = (
-        User.query.filter_by(organization_id=current_user.organization_id, role="user")
-        .options(load_only("id", "user_id", "name", "email", "image_url"))
-        .all()
-    )
-
-    staff_list = [
-        {
-            "id": user.id,
-            "user_id": user.user_id,
-            "name": user.name,
-            "email": user.email,
-            "image_url": user.image_url,
-        }
-        for user in staff
-    ]
-
-    return jsonify({"users": staff_list, "organization_id": current_user.organization_id}), 200
 
 
 # get all users logs in an organization
@@ -198,17 +168,32 @@ def get_staff():
 @jwt_required()
 def get_logs():
     current_user_id = int(get_jwt_identity())
-    current_user = User.query.filter_by(current_user_id).first()
-    logs = AttendanceRecord.query.join(AttendanceSession).filter(AttendanceSession.organization_id == current_user.organization_id).all()
+    current_user = User.query.filter_by(id=current_user_id).first()
+    
+    page = int(request.args.get("page", 1))
+    per_page = int(request.args.get("per_page", 10))
+
+    logs_query = AttendanceRecord.query.join(AttendanceSession).filter(
+        AttendanceSession.organization_id == current_user.organization_id
+    )
+    pagination = logs_query.paginate(page=page, per_page=per_page, error_out=False)
+
     logs_list = [
         {
             "user_id": log.user_id,
             "session_id": log.session_id,
             "timestamp": log.timestamp,
         }
-        for log in logs
+        for log in pagination.items
     ]
-    return jsonify({"logs": logs_list}), 200
+    
+    return jsonify({
+        "logs": logs_list,
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+        "total_pages": pagination.pages,
+    }), 200
+
 
 
 
@@ -216,7 +201,7 @@ def get_logs():
 @jwt_required()
 def get_organization_stats():
     current_user_id = int(get_jwt_identity())
-    current_user = User.query.filter_by(current_user_id).first()
+    current_user = User.query.filter_by(id=current_user_id).first()
     
     if not current_user:
         return jsonify({"error": "User not found"}), 404
@@ -237,15 +222,17 @@ def get_organization_stats():
 @user_bp.route("/search", methods=["GET"])
 @jwt_required()
 def search_user():
+    current_user_id = int(get_jwt_identity())
+    current_user = User.query.filter_by(id=current_user_id).first()
+    
+    if not current_user:
+        return jsonify({"error": "User not found"}), 404
     query = request.args.get("query", "").strip()
     if not query:
         return jsonify({"error": "Query parameter is required"}), 400
     
-    users = User.query.filter(
-        (User.name.ilike(f"%{query}%")) |
-        (User.email.ilike(f"%{query}%")) |
-        (User.user_id.ilike(f"%{query}%"))
-    ).all()
+    users = User.query.filter((User.organization_id == current_user.organization_id) & ((User.name.ilike(f"%{query}%")) | (User.email.ilike(f"%{query}%")) | (User.user_id.ilike(f"%{query}%")))).all()
+
     
     users_list = [
         {
