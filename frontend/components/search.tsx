@@ -251,6 +251,7 @@ export default function Search() {
           />
           {query && (
             <button
+              type="button"
               onClick={handleClearSearch}
               className="rounded-full p-1 hover:bg-muted"
               aria-label="Clear search"
@@ -358,7 +359,11 @@ export default function Search() {
                 >
                   <Avatar className="h-10 w-10 border">
                     {user.image_url ? (
-                      <AvatarImage src={user.image_url} alt={user.name} />
+                      <AvatarImage
+                        className="object-cover"
+                        src={user.image_url}
+                        alt={user.name}
+                      />
                     ) : (
                       <AvatarFallback>
                         {user.name.substring(0, 2).toUpperCase()}

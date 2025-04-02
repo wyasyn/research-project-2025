@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,9 +15,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { updateOrganization } from "@/lib/actions/organization";
+
+const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
+if (!serverApi) {
+  throw new Error("Backend API URL is not defined.");
+}
 
 interface OrganizationFormProps {
   initialData?: {
+    id: number;
     name: string;
     description: string;
   };
@@ -26,6 +32,7 @@ interface OrganizationFormProps {
 
 export default function OrganizationForm({
   initialData = {
+    id: 0,
     name: "",
     description: "",
   },
@@ -48,19 +55,39 @@ export default function OrganizationForm({
     setIsSubmitting(true);
 
     try {
-      // In a real application, you would send this data to your API
-      console.log("Submitting organization data:", formData);
+      const { error, id, name, description } = await updateOrganization(
+        formData
+      );
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (error) {
+        toast.error(error);
+        return;
+      }
 
+      if (!id || !name || !description) {
+        toast.error("Failed to update organization details");
+        return;
+      }
+
+      setFormData({
+        id: id,
+        name: name,
+        description: description,
+      });
       toast.success("Organization details updated successfully");
     } catch (error) {
-      toast.error("Failed to update organization details");
-      console.error(error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to update organization details"
+      );
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleCancel = () => {
+    setFormData(initialData);
   };
 
   return (
@@ -82,6 +109,7 @@ export default function OrganizationForm({
               onChange={handleChange}
               placeholder="Enter organization name"
               required
+              disabled={isSubmitting}
             />
           </div>
           <div className="space-y-2">
@@ -93,11 +121,17 @@ export default function OrganizationForm({
               onChange={handleChange}
               placeholder="Enter organization description"
               rows={5}
+              disabled={isSubmitting}
             />
           </div>
         </CardContent>
         <CardFooter className="flex justify-end mt-8 space-x-2">
-          <Button variant="outline" type="button">
+          <Button
+            variant="outline"
+            type="button"
+            onClick={handleCancel}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
           <Button type="submit" disabled={isSubmitting}>

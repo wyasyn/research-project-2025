@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef } from "react";
 import { useReactToPrint } from "react-to-print";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,60 +15,49 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trash2, Printer } from "lucide-react";
 import { Modal } from "@/app/dashboard/_components/admin/model";
 import AddUserForm from "@/app/dashboard/_components/admin/add-user-form";
+import { deleteUser } from "@/lib/actions/users";
+import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 // Sample supervisor data
 interface Supervisor {
-  id: string;
+  id: number;
   name: string;
   email: string;
-  image: string;
+  image_url: string;
+  role: "supervisor" | "user" | "admin";
 }
 
 export default function SupervisorsTable({
-  organization_id = 1,
+  supervisors,
+  organizationId,
 }: {
-  organization_id?: number;
+  supervisors: Supervisor[];
+  organizationId: number;
 }) {
-  // Initial supervisors data
-  const [supervisors, setSupervisors] = useState<Supervisor[]>([
-    {
-      id: "1",
-      name: "John Smith",
-      email: "john.smith@company.com",
-      image: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: "2",
-      name: "Sarah Johnson",
-      email: "sarah.johnson@company.com",
-      image: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: "3",
-      name: "Michael Brown",
-      email: "michael.brown@company.com",
-      image: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: "4",
-      name: "Emily Davis",
-      email: "emily.davis@company.com",
-      image: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: "5",
-      name: "Robert Wilson",
-      email: "robert.wilson@company.com",
-      image: "/placeholder.svg?height=40&width=40",
-    },
-  ]);
-
   // Reference to the table component for printing
   const tableRef = useRef<HTMLDivElement>(null);
 
+  const router = useRouter();
+
   // Function to handle deleting a supervisor
-  const handleDelete = (id: string) => {
-    setSupervisors(supervisors.filter((supervisor) => supervisor.id !== id));
+  const handleDelete = async (id: number) => {
+    try {
+      const { error, success } = await deleteUser(id);
+      if (error) {
+        toast.error(error);
+        return;
+      }
+      if (!success) {
+        toast.error("Failed to delete Supervisor");
+        return;
+      }
+      toast.success("Supervisor deleted successfully");
+      router.refresh();
+    } catch (error) {
+      console.log(error);
+      toast.error("Failed to delete Supervisor");
+    }
   };
 
   const reactToPrintContent = () => {
@@ -79,6 +68,19 @@ export default function SupervisorsTable({
     documentTitle: "Supervisors List",
     onAfterPrint: () => console.log("Print completed"),
   });
+
+  if (supervisors && supervisors.length === 0) {
+    return (
+      <section className="container mx-auto py-8 px-4 max-w-[768px]">
+        <div className="flex justify-end items-center mb-6 w-full">
+          <Modal title="Add Supervisor">
+            <AddUserForm role="supervisor" organization_id={organizationId} />
+          </Modal>
+        </div>
+        <p>No supervisors found. Please add to view.</p>
+      </section>
+    );
+  }
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-[768px]">
@@ -94,7 +96,7 @@ export default function SupervisorsTable({
             Print to PDF
           </Button>
           <Modal title="Add Supervisor">
-            <AddUserForm role="supervisor" organization_id={organization_id} />
+            <AddUserForm role="supervisor" organization_id={organizationId} />
           </Modal>
         </div>
       </div>
@@ -114,7 +116,11 @@ export default function SupervisorsTable({
               <TableRow key={supervisor.id}>
                 <TableCell>
                   <Avatar>
-                    <AvatarImage src={supervisor.image} alt={supervisor.name} />
+                    <AvatarImage
+                      src={supervisor.image_url}
+                      alt={supervisor.name}
+                      className="object-cover"
+                    />
                     <AvatarFallback>
                       {supervisor.name.substring(0, 2).toUpperCase()}
                     </AvatarFallback>

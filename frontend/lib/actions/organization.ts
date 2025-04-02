@@ -45,3 +45,49 @@ export const getOrganizationDetails = cache(async () => {
     }
   }
 });
+
+export const updateOrganization = async ({
+  id,
+  name,
+  description,
+}: {
+  id: number;
+  name: string;
+  description: string;
+}) => {
+  try {
+    const cookieStore = await cookies();
+    const tokenObj = cookieStore.get("token");
+    const response = await fetch(`${serverApi}/organizations/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tokenObj?.value}`,
+      },
+      body: JSON.stringify({
+        id,
+        name,
+        description,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok) {
+      return {
+        error: `Failed to update organization: ${
+          data?.error || response.statusText || `Status ${response.status}`
+        }`,
+      };
+    }
+
+    const organization = data.organization;
+    return {
+      id: organization.id,
+      name: organization.name,
+      description: organization.description,
+    };
+  } catch (error) {
+    console.log(error);
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+};

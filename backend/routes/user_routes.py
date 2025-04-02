@@ -81,15 +81,14 @@ def get_user_attendance(user_id):
 
 
 # Delete user
-@user_bp.route("/delete/<user_id>", methods=["DELETE"])
+@user_bp.route("/<id>", methods=["DELETE"])
 @jwt_required()
-@supervisor_required 
-def delete_user(user_id):
+def delete_user(id):
     current_user_id = int(get_jwt_identity())
     current_user = User.query.get(current_user_id)
-    user = User.query.filter_by(user_id=user_id, organization_id=current_user.organization_id).first()
+    user = User.query.filter_by(id=id, organization_id=current_user.organization_id).first()
     if not user:
-        return jsonify({"message": "User not found or not in your organization."}), 404
+        return jsonify({"error": "User not found or not in your organization."}), 404
 
     AttendanceRecord.query.filter_by(user_id=user.id).delete()
     db.session.delete(user)

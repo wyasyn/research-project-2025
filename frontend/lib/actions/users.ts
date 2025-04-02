@@ -189,3 +189,38 @@ export const getUser = async () => {
     return { error: error instanceof Error ? error.message : String(error) };
   }
 };
+
+export const deleteUser = async (id: number) => {
+  try {
+    const cookieStore = await cookies();
+    const tokenObj = cookieStore.get("token");
+
+    if (!tokenObj?.value) {
+      return { error: "Authentication token is missing." };
+    }
+
+    const response = await fetch(`${serverApi}/users/${id}`, {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tokenObj?.value}`,
+      },
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return { error: `Failed to delete user: ${response.statusText}` };
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      return { error: data.error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+};
