@@ -5,9 +5,13 @@ import { images } from "@/assets/images/images";
 import NavItem from "./nav-item";
 import SidebarWrapper from "./sidebar-wrapper";
 import UserBtn from "./user-btn";
-import { adminSidebarLinks } from "@/lib/sidebar-limks";
+import { JSX } from "react";
 
-export default function DashboardNav() {
+export default function DashboardNav({
+  list,
+}: {
+  list: { name: string; icon: JSX.Element; link: string }[];
+}) {
   return (
     <SidebarWrapper>
       <Button variant="ghost" size={"icon"} asChild>
@@ -16,7 +20,7 @@ export default function DashboardNav() {
         </Link>
       </Button>
       <section className="flex flex-col gap-4 md:mt-8">
-        {adminSidebarLinks.map((item) => (
+        {list.map((item) => (
           <NavItem
             key={item.name}
             name={item.name}
