@@ -1,7 +1,7 @@
-/* eslint-disable @next/next/no-img-element */
 "use client";
+/* eslint-disable @next/next/no-img-element */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 
@@ -10,20 +10,25 @@ const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
 interface FaceRecognitionProps {
   sessionId: number;
   onComplete: () => void;
+  cameraIndex: number;
 }
 
 export function FaceRecognition({
   sessionId,
   onComplete,
+  cameraIndex,
 }: FaceRecognitionProps) {
   const imgRef = useRef<HTMLImageElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isStreamReady, setIsStreamReady] = useState(false);
 
-  useEffect(() => {
-    const streamUrl = `${serverApi}/recognize/${sessionId}`;
+  // Memoize the stream URL to avoid unnecessary recalculations
+  const streamUrl = useMemo(() => {
+    return `${serverApi}/recognize/${sessionId}?camera=${cameraIndex}`;
+  }, [sessionId, cameraIndex]);
 
+  useEffect(() => {
     if (imgRef.current) {
       const imgElement = imgRef.current;
       console.log(`Stream URL: ${streamUrl}`);
@@ -31,13 +36,11 @@ export function FaceRecognition({
       // Set the image source for the stream
       imgElement.src = streamUrl;
 
-      // Stream loading and completion handling
       imgElement.onload = () => {
         setLoading(false);
         setIsStreamReady(true);
       };
 
-      // Handle image errors more effectively
       imgElement.onerror = (event) => {
         console.error("Error loading image:", event);
         setError(
@@ -47,11 +50,10 @@ export function FaceRecognition({
       };
 
       return () => {
-        // Clean up the image source on component unmount
         imgElement.src = "";
       };
     }
-  }, [sessionId, onComplete]);
+  }, [streamUrl, onComplete]);
 
   if (error) {
     return (
@@ -75,11 +77,10 @@ export function FaceRecognition({
         <img
           ref={imgRef}
           alt="Face recognition stream"
-          className="w-full h-full object-contain"
+          className="w-full h-full object-cover"
         />
       </div>
 
-      {/* Display additional messages when the stream is ready */}
       {isStreamReady && (
         <p className="text-sm text-muted-foreground mt-2 text-center">
           Face recognition is active. Stand in front of the camera to be marked

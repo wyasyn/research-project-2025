@@ -18,6 +18,7 @@ import { FaceRecognition } from "@/components/face-recognition";
 import { getUsers } from "@/lib/actions/users";
 import { getSessionDetails } from "@/app/dashboard/supervisor/_components/attendance";
 import { AttendanceRecord } from "@/types";
+import { CameraSelector } from "./camera-selector";
 
 interface User {
   id: number;
@@ -40,6 +41,7 @@ export function AttendanceManagement({ sessionId }: AttendanceManagementProps) {
   const [loading, setLoading] = useState(true);
   const [recognitionActive, setRecognitionActive] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [selectedCameraIndex, setSelectedCameraIndex] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -186,7 +188,7 @@ export function AttendanceManagement({ sessionId }: AttendanceManagementProps) {
       </TabsContent>
 
       <TabsContent value="recognition">
-        <Card>
+        <Card className="max-w-[700px] mx-auto mt-12">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Camera className="mr-2 h-5 w-5" />
@@ -197,10 +199,14 @@ export function AttendanceManagement({ sessionId }: AttendanceManagementProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            <CameraSelector
+              onSelect={(deviceId, index) => setSelectedCameraIndex(index)}
+            />
             {recognitionActive ? (
               <>
                 <FaceRecognition
                   sessionId={sessionId}
+                  cameraIndex={selectedCameraIndex}
                   onComplete={() => {
                     setRecognitionActive(false);
                     refreshData();
