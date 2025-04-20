@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { DashboardHeader } from "../../_components/dashboard-header";
 import { RecentActivityTable } from "./recent-activity";
 import SupervisorStats from "./supervisor-stats";
@@ -9,8 +10,12 @@ export default function OverviewSupervisor() {
         heading="Dashboard"
         text="Welcome to your supervisor dashboard."
       />
-      <SupervisorStats />
-      <RecentActivityTable />
+      <Suspense fallback="...">
+        <SupervisorStats />
+      </Suspense>
+      <Suspense fallback="Loading...">
+        <RecentActivityTable />
+      </Suspense>
     </section>
   );
 }

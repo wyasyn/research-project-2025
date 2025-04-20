@@ -38,63 +38,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CreateSessionDialog } from "./create";
+import { AttendanceSession } from "../attendance";
+import { formatStartTimeFull } from "@/lib/utils";
+import { useRouter } from "next/navigation";
 
-export function AttendanceManagement() {
+export function AttendanceManagement({
+  sessions,
+}: {
+  sessions: AttendanceSession[];
+}) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Mock data - in a real app, this would come from an API
-  const sessions = [
-    {
-      id: "1",
-      name: "Morning Check-in",
-      date: "2025-03-23",
-      time: "09:00 AM",
-      location: "Main Office",
-      attendees: 24,
-      status: "Active",
-    },
-    {
-      id: "2",
-      name: "Team Meeting",
-      date: "2025-03-23",
-      time: "10:30 AM",
-      location: "Conference Room A",
-      attendees: 12,
-      status: "Active",
-    },
-    {
-      id: "3",
-      name: "Project Review",
-      date: "2025-03-22",
-      time: "02:00 PM",
-      location: "Conference Room B",
-      attendees: 8,
-      status: "Completed",
-    },
-    {
-      id: "4",
-      name: "Training Session",
-      date: "2025-03-24",
-      time: "11:00 AM",
-      location: "Training Room",
-      attendees: 15,
-      status: "Scheduled",
-    },
-    {
-      id: "5",
-      name: "Department Meeting",
-      date: "2025-03-25",
-      time: "09:30 AM",
-      location: "Conference Room C",
-      attendees: 20,
-      status: "Scheduled",
-    },
-  ];
+  const router = useRouter();
 
   const filteredSessions = sessions.filter(
     (session) =>
-      session.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      session.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       session.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
@@ -160,17 +119,19 @@ export function AttendanceManagement() {
             <TableBody>
               {filteredSessions.map((session) => (
                 <TableRow key={session.id}>
-                  <TableCell className="font-medium">{session.name}</TableCell>
+                  <TableCell className="font-medium">{session.title}</TableCell>
                   <TableCell>{session.date}</TableCell>
-                  <TableCell>{session.time}</TableCell>
+                  <TableCell>
+                    {formatStartTimeFull(session.start_time)}
+                  </TableCell>
                   <TableCell>{session.location}</TableCell>
                   <TableCell>{session.attendees}</TableCell>
                   <TableCell>
                     <Badge
                       variant={
-                        session.status === "Active"
+                        session.status === "active"
                           ? "default"
-                          : session.status === "Completed"
+                          : session.status === "completed"
                           ? "secondary"
                           : "outline"
                       }
@@ -192,8 +153,17 @@ export function AttendanceManagement() {
                           Edit
                         </DropdownMenuItem>
                         <DropdownMenuItem>
-                          <Download className="mr-2 h-4 w-4" />
-                          Export Records
+                          <Button
+                            className="w-full"
+                            variant={"ghost"}
+                            onClick={() =>
+                              router.push(
+                                `/dashboard/supervisor/attendance/${session.id}`
+                              )
+                            }
+                          >
+                            Manage Attendance
+                          </Button>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem className="text-destructive">

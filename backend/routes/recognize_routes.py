@@ -3,15 +3,13 @@ from flask import Blueprint, Response, jsonify
 import face_recognition
 import numpy as np
 
-from middleware import supervisor_required
-from models import AttendanceRecord, AttendanceSession, User, Organization
+from models import AttendanceRecord, AttendanceSession, User
 from utils.face_utils import load_known_faces
 from config import db
 
 recognize_bp = Blueprint('recognize', __name__)
 
-@recognize_bp.route("/<int:session_id>", methods=["GET"])
-@supervisor_required 
+@recognize_bp.route("/<int:session_id>", methods=["GET"]) 
 def recognize(session_id):
     session = AttendanceSession.query.get(session_id)
     if not session:
@@ -26,18 +24,25 @@ def recognize(session_id):
 
     # Open webcam
     video_capture = cv2.VideoCapture(0, cv2.CAP_DSHOW)  # CAP_DSHOW speeds up camera on Windows
+    if not video_capture.isOpened():
+        return jsonify({"message": "Failed to access the webcam."}), 500
 
     # Define colors
     GREEN = (39, 123, 62)
     RED = (89, 14, 195)
     new_attendance_records = []
-
+    
     def generate_video_stream():
+        frame_count = 0
         try:
             while True:
                 ret, frame = video_capture.read()
                 if not ret:
                     break
+
+                frame_count += 1
+                if frame_count % 3 != 0:  # Only process every 3rd frame to optimize performance
+                    continue
 
                 # Convert frame to RGB (OpenCV loads images in BGR)
                 rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
@@ -87,6 +92,10 @@ def recognize(session_id):
 
                 yield (b'--frame\r\n'
                        b'Content-Type: image/jpeg\r\n\r\n' + jpeg.tobytes() + b'\r\n\r\n')
+
+        except Exception as e:
+            print(f"Error during face recognition: {e}")
+            return jsonify({"message": "Error during face recognition."}), 500
 
         finally:
             video_capture.release()

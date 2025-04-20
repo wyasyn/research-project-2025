@@ -7,7 +7,6 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from middleware import supervisor_required
 from utils.pagination_utils import paginate_query
-
 from dateutil import parser  # pip install python-dateutil
 
 attendance_bp = Blueprint('attendance', __name__)
@@ -64,7 +63,8 @@ def get_all_sessions():
         "start_time": s.start_time.isoformat(),
         "duration_minutes": s.duration_minutes,
         "status": s.computed_status,
-        "location": s.location
+        "location": s.location,
+        "attendees": len(s.records)
     } for s in paginated]
 
     return jsonify({
@@ -238,3 +238,62 @@ def mark_attendance():
     except Exception as e:
         current_app.logger.error(f"Error marking attendance: {e}")
         return jsonify({"message": "An error occurred while marking attendance."}), 500
+
+
+@attendance_bp.route("/latest-records", methods=["GET"])
+@jwt_required()
+def get_latest_attendance_records():
+    user_id = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+
+    # Only records from the same organization
+    subquery = (
+        db.session.query(
+            AttendanceRecord.session_id,
+            db.func.max(AttendanceRecord.timestamp).label("max_timestamp")
+        )
+        .join(AttendanceSession)
+        .filter(AttendanceSession.organization_id == user.organization_id)
+        .group_by(AttendanceRecord.session_id)
+        .subquery()
+    )
+
+    latest_records = (
+        db.session.query(AttendanceRecord)
+        .join(AttendanceSession, AttendanceRecord.session_id == AttendanceSession.id)
+        .join(User, AttendanceRecord.user_id == User.id)
+        .join(subquery, db.and_(
+            AttendanceRecord.session_id == subquery.c.session_id,
+            AttendanceRecord.timestamp == subquery.c.max_timestamp
+        ))
+        .order_by(AttendanceRecord.timestamp.desc())
+        .limit(10)
+        .all()
+    )
+
+    result = [{
+        "user_id": r.user.id,
+        "name": r.user.name,
+        "email": r.user.email,
+        "image_url": r.user.image_url,
+        "session_title": r.session.title,
+        "timestamp": r.timestamp.isoformat(),
+        "status": r.session.computed_status
+    } for r in latest_records]
+
+    return jsonify(result)
+
+
+@attendance_bp.route("/total-sessions", methods=["GET"])
+@jwt_required()
+def get_total_sessions():
+    user_id = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+
+    total_sessions = (
+        AttendanceSession.query
+        .filter_by(organization_id=user.organization_id)
+        .count()
+    )
+
+    return jsonify({"total_sessions": total_sessions})
