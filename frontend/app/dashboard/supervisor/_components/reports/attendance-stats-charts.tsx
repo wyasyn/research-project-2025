@@ -1,140 +1,93 @@
 "use client";
 
-import { Card } from "@/components/ui/card";
+import { TrendingUp } from "lucide-react";
+import { Bar, BarChart, CartesianGrid, XAxis } from "recharts";
 import {
-  Chart,
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  ChartConfig,
   ChartContainer,
-  ChartLegend,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  ResponsiveContainer,
-} from "recharts";
+import { useEffect, useState } from "react";
+import { WeeklyAttendanceResponse } from "@/types";
+import { fetchWeeklyAttendance } from "../attendance";
 
 export function AttendanceStatsChart() {
-  // Mock data - in a real app, this would come from an API
-  const data = [
-    {
-      name: "Monday",
-      present: 42,
-      late: 8,
-      absent: 5,
+  const [data, setData] = useState<WeeklyAttendanceResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchWeeklyAttendance()
+      .then(setData)
+      .catch((e) => setError(e.message));
+  }, []);
+
+  if (error) return <p className="text-destructive">Error: {error}</p>;
+  if (!data)
+    return (
+      <p>
+        Loading attendance statistics...
+        <br />
+        <span className="text-muted-foreground">
+          This may take a few seconds.
+        </span>
+      </p>
+    );
+  const chartData = data.weeks.map((week, i) => ({
+    week: `Week ${i + 1}`,
+    present: week.attendee_count,
+  }));
+
+  const chartConfig = {
+    present: {
+      label: "Present",
+      color: "hsl(var(--chart-1))",
     },
-    {
-      name: "Tuesday",
-      present: 38,
-      late: 10,
-      absent: 7,
-    },
-    {
-      name: "Wednesday",
-      present: 45,
-      late: 5,
-      absent: 5,
-    },
-    {
-      name: "Thursday",
-      present: 40,
-      late: 12,
-      absent: 3,
-    },
-    {
-      name: "Friday",
-      present: 35,
-      late: 8,
-      absent: 12,
-    },
-  ];
+  } satisfies ChartConfig;
 
   return (
-    <Card className="p-4">
-      <ChartContainer
-        title="Weekly Attendance"
-        description="Attendance statistics for the current week"
-        height={350}
-      >
-        <Chart>
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={data}
-              margin={{
-                top: 16,
-                right: 16,
-                left: 0,
-                bottom: 0,
-              }}
-            >
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <ChartTooltip
-                content={
-                  <ChartTooltipContent
-                    className="border-none bg-background p-2 shadow-lg"
-                    items={({ payload }) => {
-                      return [
-                        {
-                          label: "Present",
-                          value: payload?.[0]?.value,
-                          color: "hsl(var(--chart-1))",
-                        },
-                        {
-                          label: "Late",
-                          value: payload?.[1]?.value,
-                          color: "hsl(var(--chart-2))",
-                        },
-                        {
-                          label: "Absent",
-                          value: payload?.[2]?.value,
-                          color: "hsl(var(--chart-3))",
-                        },
-                      ];
-                    }}
-                  />
-                }
-              />
-              <Bar
-                dataKey="present"
-                fill="hsl(var(--chart-1))"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="late"
-                fill="hsl(var(--chart-2))"
-                radius={[4, 4, 0, 0]}
-              />
-              <Bar
-                dataKey="absent"
-                fill="hsl(var(--chart-3))"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </Chart>
-        <ChartLegend
-          className="mt-4 justify-center"
-          items={[
-            {
-              label: "Present",
-              color: "hsl(var(--chart-1))",
-            },
-            {
-              label: "Late",
-              color: "hsl(var(--chart-2))",
-            },
-            {
-              label: "Absent",
-              color: "hsl(var(--chart-3))",
-            },
-          ]}
-        />
-      </ChartContainer>
+    <Card className="w-full max-w-[768px]">
+      <CardHeader>
+        <CardTitle>Bar Chart</CardTitle>
+        <CardDescription>{data.month} Attendance Statistics</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ChartContainer config={chartConfig}>
+          <BarChart accessibilityLayer data={chartData}>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="week"
+              tickLine={false}
+              tickMargin={10}
+              axisLine={false}
+            />
+
+            <ChartTooltip
+              cursor={false}
+              content={<ChartTooltipContent hideLabel />}
+            />
+            <Bar dataKey="present" fill="var(--color-desktop)" radius={8} />
+          </BarChart>
+        </ChartContainer>
+      </CardContent>
+      <CardFooter className="flex-col items-start gap-2 text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <TrendingUp className="h-4 w-4" />
+          <span>Attendance Statistics</span>
+        </div>
+        <p className="text-muted-foreground">
+          This chart shows the attendance statistics for the month of{" "}
+          {data.month}.
+        </p>
+      </CardFooter>
     </Card>
   );
 }

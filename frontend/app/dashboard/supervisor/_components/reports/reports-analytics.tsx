@@ -38,9 +38,9 @@ import {
 } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { AttendanceStatsChart } from "@/components/reports/attendance-stats-chart";
-import { AttendanceByUserTable } from "@/components/reports/attendance-by-user-table";
-import { AttendanceBySessionTable } from "@/components/reports/attendance-by-session-table";
+import { AttendanceStatsChart } from "./attendance-stats-charts";
+import { AttendanceByUserTable } from "./attendance-by-user-table";
+import { AttendanceBySessionTable } from "./attendance-by-session-table";
 
 export function ReportsAnalytics() {
   const [date, setDate] = useState<Date>();

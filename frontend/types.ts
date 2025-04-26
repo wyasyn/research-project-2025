@@ -30,3 +30,37 @@ export interface AttendanceSessionDetails {
   location: string | null;
   records: AttendanceRecord[];
 }
+
+export interface UserAttendanceSummary {
+  user_id: number;
+  name: string;
+  email: string;
+  image_url: string | null;
+  total_sessions: number;
+  attended_sessions: number;
+  attendance_percentage: number;
+}
+
+export interface SessionAttendanceSummary {
+  session_id: number;
+  title: string;
+  date: string; // ISO date
+  start_time: string; // ISO datetime
+  duration_minutes: number;
+  location: string | null;
+  status: string; // “scheduled” | “active” | “completed”
+  total_users: number;
+  attended_sessions: number;
+  attendance_percentage: number;
+}
+
+export interface WeeklyAttendanceWeek {
+  week_start: string; // ISO date of week start (Monday or clipped)
+  week_end: string; // ISO date of week end   (Sunday or clipped)
+  attendee_count: number; // number of records in that week
+}
+
+export interface WeeklyAttendanceResponse {
+  month: string; // "YYYY-MM"
+  weeks: WeeklyAttendanceWeek[];
+}

@@ -6,7 +6,12 @@ import { cookies } from "next/headers";
 import { SessionFormValues } from "@/types";
 import { revalidatePath } from "next/cache";
 
-import type { AttendanceSessionDetails } from "@/types";
+import type {
+  AttendanceSessionDetails,
+  SessionAttendanceSummary,
+  UserAttendanceSummary,
+  WeeklyAttendanceResponse,
+} from "@/types";
 
 const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
 
@@ -272,4 +277,73 @@ export async function getSessionDetails(sessionId: number): Promise<{
       error: "Failed to fetch session details",
     };
   }
+}
+
+export async function fetchUsersAttendanceSummary(): Promise<
+  UserAttendanceSummary[]
+> {
+  const cookieStore = await cookies();
+  const tokenObj = cookieStore.get("token");
+  if (!tokenObj) {
+    throw new Error("No auth token found — please log in.");
+  }
+  const res = await fetch(`${serverApi}/attendance/users/attendance-summary`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${tokenObj?.value}`,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchSessionsAttendanceSummary(): Promise<
+  SessionAttendanceSummary[]
+> {
+  const cookieStore = await cookies();
+  const tokenObj = cookieStore.get("token");
+  if (!tokenObj) {
+    throw new Error("No auth token found — please log in.");
+  }
+  const res = await fetch(`${serverApi}/attendance/sessions/summary`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${tokenObj?.value}`,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+export async function fetchWeeklyAttendance(
+  month?: string
+): Promise<WeeklyAttendanceResponse> {
+  const cookieStore = await cookies();
+  const tokenObj = cookieStore.get("token");
+  if (!tokenObj) {
+    throw new Error("No auth token found — please log in.");
+  }
+  const url = new URL(`${serverApi}/attendance/weekly`);
+  if (month) url.searchParams.set("month", month);
+
+  const res = await fetch(url.toString(), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${tokenObj?.value}`,
+    },
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+
+  return res.json();
 }

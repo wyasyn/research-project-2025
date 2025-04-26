@@ -1,8 +1,9 @@
 from flask import Blueprint, request, jsonify, current_app
-import pandas as pd
+
 from config import db
 from models import AttendanceRecord, AttendanceSession, User
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, date
+import calendar  # for monthrange
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from middleware import supervisor_required
@@ -297,3 +298,137 @@ def get_total_sessions():
     )
 
     return jsonify({"total_sessions": total_sessions})
+
+
+@attendance_bp.route("/weekly", methods=["GET"])
+@jwt_required()
+def get_weekly_attendance():
+    # parse month param as "YYYY-MM", default to current month
+    month_str = request.args.get("month")
+    if month_str:
+        try:
+            year, month = map(int, month_str.split("-", 1))
+        except ValueError:
+            return jsonify({"message": "month must be in YYYY-MM format"}), 400
+    else:
+        now = datetime.now(timezone.utc).date()
+        year, month = now.year, now.month
+
+    # compute first/last day of month
+    first_day = date(year, month, 1)
+    last_day   = date(year, month, calendar.monthrange(year, month)[1])
+
+    # find the Monday of the week containing the 1st
+    start_monday = first_day - timedelta(days=first_day.weekday())
+
+    # build week ranges
+    weeks = []
+    cur_start = start_monday
+    while cur_start <= last_day:
+        cur_end = cur_start + timedelta(days=6)
+        # cap to month bounds
+        week_start = max(cur_start, first_day)
+        week_end   = min(cur_end,   last_day)
+        weeks.append((week_start, week_end))
+        cur_start = cur_end + timedelta(days=1)
+
+    # get current user & their org
+    user = User.query.get_or_404(int(get_jwt_identity()))
+
+    results = []
+    for start, end in weeks:
+        count = (
+            db.session.query(AttendanceRecord)
+            .join(AttendanceSession, AttendanceRecord.session_id == AttendanceSession.id)
+            .filter(AttendanceSession.organization_id == user.organization_id)
+            .filter(AttendanceRecord.timestamp >= datetime.combine(start, datetime.min.time(), tzinfo=timezone.utc))
+            .filter(AttendanceRecord.timestamp <  datetime.combine(end + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc))
+            .count()
+        )
+        results.append({
+            "week_start": start.isoformat(),
+            "week_end":   end.isoformat(),
+            "attendee_count": count
+        })
+
+    return jsonify({
+        "month": f"{year:04d}-{month:02d}",
+        "weeks": results
+    })
+    
+    
+
+@attendance_bp.route("/users/attendance-summary", methods=["GET"])
+@jwt_required()
+def users_attendance_summary():
+    """Returns all users in the org with their attendance stats."""
+    requester = User.query.get_or_404(int(get_jwt_identity()))
+    if requester.role not in ("admin", "supervisor"):
+        return jsonify({"message": "Unauthorized"}), 403
+
+    # all non‐scheduled sessions in this org
+    sessions = AttendanceSession.query \
+        .filter_by(organization_id=requester.organization_id) \
+        .filter(AttendanceSession.status != "scheduled") \
+        .all()
+    session_ids = [s.id for s in sessions]
+    total_sessions = len(sessions)
+
+    users = User.query.filter_by(organization_id=requester.organization_id).all()
+    result = []
+    for u in users:
+        attended = db.session.query(AttendanceRecord) \
+            .filter(AttendanceRecord.user_id == u.id) \
+            .filter(AttendanceRecord.session_id.in_(session_ids)) \
+            .count()
+        pct = round((attended / total_sessions) * 100, 2) if total_sessions else 0.0
+
+        result.append({
+            "user_id": u.id,
+            "name": u.name,
+            "email": u.email,
+            "image_url": u.image_url,
+            "total_sessions": total_sessions,
+            "attended_sessions": attended,
+            "attendance_percentage": pct
+        })
+
+    return jsonify(result), 200
+
+
+@attendance_bp.route("/sessions/summary", methods=["GET"])
+@jwt_required()
+def sessions_attendance_summary():
+    """Returns all sessions in the org with their attendance stats."""
+    requester = User.query.get_or_404(int(get_jwt_identity()))
+    if requester.role not in ("admin", "supervisor"):
+        return jsonify({"message": "Unauthorized"}), 403
+
+    # all sessions in this org
+    sessions = AttendanceSession.query \
+        .filter_by(organization_id=requester.organization_id) \
+        .order_by(AttendanceSession.start_time.desc()) \
+        .all()
+
+    # total users (you can filter by role='user' if you only want end‐users)
+    total_users = User.query.filter_by(organization_id=requester.organization_id).count()
+
+    result = []
+    for s in sessions:
+        count = len(s.records)
+        pct = round((count / total_users) * 100, 2) if total_users else 0.0
+
+        result.append({
+            "session_id": s.id,
+            "title": s.title,
+            "date": s.date.isoformat(),
+            "start_time": s.start_time.isoformat(),
+            "duration_minutes": s.duration_minutes,
+            "location": s.location,
+            "status": s.computed_status,
+            "total_users": total_users,
+            "attended_sessions": count,
+            "attendance_percentage": pct
+        })
+
+    return jsonify(result), 200
