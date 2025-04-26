@@ -23,7 +23,7 @@ export function AttendanceBySessionTable() {
       .catch((e) => setError(e.message));
   }, []);
 
-  if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
+  if (error) return <p className="text-destructive p-3">Error: {error}</p>;
   if (!sessions) return <p>Loading…</p>;
 
   return (

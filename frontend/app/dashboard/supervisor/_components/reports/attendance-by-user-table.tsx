@@ -22,7 +22,7 @@ export function AttendanceByUserTable() {
       .catch((e) => setError(e.message));
   }, []);
 
-  if (error) return <p style={{ color: "red" }}>Error: {error}</p>;
+  if (error) return <p className="text-destructive p-3">Error: {error}</p>;
   if (!data) return <p>Loading…</p>;
   return (
     <Table>
