@@ -42,6 +42,7 @@ export async function RecentActivityTable() {
                   <AvatarImage
                     src={activity.image_url || "/placeholder-image..jpg"}
                     alt={activity.name}
+                    className="object-cover"
                   />
                   <AvatarFallback>{activity.name.charAt(0)}</AvatarFallback>
                 </Avatar>

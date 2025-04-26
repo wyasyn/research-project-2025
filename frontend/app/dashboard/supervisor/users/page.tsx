@@ -1,15 +1,11 @@
-import React from "react";
-import { UserManagement } from "../_components/users/user-management";
-import { DashboardHeader } from "../../_components/dashboard-header";
+import { LoadingSkeleton } from "@/components/LoadingSkeleton";
+import React, { Suspense } from "react";
+import UsersList from "../../_components/admin/UsersData";
 
 export default function page() {
   return (
-    <main>
-      <DashboardHeader
-        heading="User Management"
-        text="Manage users and their roles."
-      />
-      <UserManagement />
-    </main>
+    <Suspense fallback={<LoadingSkeleton />}>
+      <UsersList />
+    </Suspense>
   );
 }

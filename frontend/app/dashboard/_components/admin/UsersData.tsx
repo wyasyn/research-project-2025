@@ -15,7 +15,15 @@ export default async function UsersList() {
   }
 
   if (users.length === 0) {
-    return <p>No users found. Please add some in the admin panel.</p>;
+    return (
+      <section className="flex flex-col items-center justify-center h-full p-4 space-y-3 text-center">
+        <h2 className="text-lg font-semibold">No users found</h2>
+        <p className="text-sm ">Add a new user to get started.</p>
+        <Modal title="Add Supervisor">
+          <AddUserForm role="user" organization_id={organizationId} />
+        </Modal>
+      </section>
+    );
   }
 
   return (
