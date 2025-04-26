@@ -347,3 +347,27 @@ export async function fetchWeeklyAttendance(
 
   return res.json();
 }
+
+export async function fetchUserAttendanceSummary(): Promise<UserAttendanceSummary> {
+  const cookieStore = await cookies();
+  const tokenObj = cookieStore.get("token");
+  if (!tokenObj) {
+    throw new Error("No auth token found — please log in.");
+  }
+
+  const res = await fetch(`${serverApi}/users/summary`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${tokenObj.value}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.message || `HTTP ${res.status}`);
+  }
+
+  return res.json();
+}

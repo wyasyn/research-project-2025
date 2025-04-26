@@ -56,6 +56,6 @@ export const userLinks = [
   {
     name: "Dashboard",
     icon: <LayoutDashboard size={24} aria-hidden="true" />,
-    link: "/dashboard/users",
+    link: "/dashboard/user",
   },
 ];

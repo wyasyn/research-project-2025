@@ -1,9 +1,9 @@
-from flask import Blueprint, request, jsonify, current_app, send_file
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import get_jwt_identity, jwt_required
 from sqlalchemy.orm import load_only
-from middleware import supervisor_required
-from models import AttendanceRecord, AttendanceSession, User, Organization
+from models import AttendanceRecord, AttendanceSession, User
 from config import db
+from sqlalchemy import func, extract
 
 user_bp = Blueprint('user', __name__)
 
@@ -246,3 +246,90 @@ def search_user():
     ]
     
     return jsonify({"users": users_list}), 200
+
+
+
+
+@user_bp.route("/summary", methods=["GET"])
+@jwt_required()
+def get_user_attendance_summary():
+    user_id = int(get_jwt_identity())
+    user = User.query.get_or_404(user_id)
+
+    # 1. Total sessions in user's organization
+    total_sessions = AttendanceSession.query.filter_by(
+        organization_id=user.organization_id
+    ).count()
+
+    # 2. Sessions the user has attended
+    sessions_attended = AttendanceRecord.query.filter_by(
+        user_id=user.id
+    ).count()
+
+    # 3. Attendance rate
+    attendance_rate = (
+        (sessions_attended / total_sessions) * 100
+        if total_sessions > 0 else 0
+    )
+
+    # 4. Recent attendance (latest 10 records)
+    recent_records = (
+        db.session.query(AttendanceRecord, AttendanceSession)
+        .join(AttendanceSession, AttendanceRecord.session_id == AttendanceSession.id)
+        .filter(AttendanceRecord.user_id == user.id)
+        .order_by(AttendanceRecord.timestamp.desc())
+        .limit(10)
+        .all()
+    )
+
+    recent_attendance = [
+        {
+            "session_name": session.title,
+            "date": record.timestamp.date().isoformat(),
+            "status": "Present"  # always present because record exists
+        }
+        for record, session in recent_records
+    ]
+
+    # 5. Monthly progress (how much user attended vs how many sessions were held)
+    monthly_sessions = db.session.query(
+        extract('year', AttendanceSession.date).label('year'),
+        extract('month', AttendanceSession.date).label('month'),
+        func.count(AttendanceSession.id).label('total_sessions')
+    ).filter(
+        AttendanceSession.organization_id == user.organization_id
+    ).group_by('year', 'month').order_by('year', 'month').all()
+
+    monthly_attended = db.session.query(
+        extract('year', AttendanceRecord.timestamp).label('year'),
+        extract('month', AttendanceRecord.timestamp).label('month'),
+        func.count(AttendanceRecord.id).label('attended_sessions')
+    ).filter(
+        AttendanceRecord.user_id == user.id
+    ).group_by('year', 'month').order_by('year', 'month').all()
+
+    attended_lookup = {(row.year, row.month): row.attended_sessions for row in monthly_attended}
+
+    monthly_progress = []
+    for month in monthly_sessions:
+        attended = attended_lookup.get((month.year, month.month), 0)
+        rate = (attended / month.total_sessions) * 100 if month.total_sessions > 0 else 0
+        monthly_progress.append({
+            "month": f"{int(month.year)}-{int(month.month):02d}",
+            "attendance_rate": round(rate, 2)
+        })
+
+    return jsonify({
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "image": user.image_url
+        },
+        "organization_name": user.organization.name,
+        "total_sessions": total_sessions,
+        "sessions_attended": sessions_attended,
+        "attendance_rate": round(attendance_rate, 2),
+        "recent_attendance": recent_attendance,
+        "monthly_progress": monthly_progress
+    })

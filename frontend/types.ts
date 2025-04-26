@@ -31,16 +31,6 @@ export interface AttendanceSessionDetails {
   records: AttendanceRecord[];
 }
 
-export interface UserAttendanceSummary {
-  user_id: number;
-  name: string;
-  email: string;
-  image_url: string | null;
-  total_sessions: number;
-  attended_sessions: number;
-  attendance_percentage: number;
-}
-
 export interface SessionAttendanceSummary {
   session_id: number;
   title: string;
@@ -64,3 +54,50 @@ export interface WeeklyAttendanceResponse {
   month: string; // "YYYY-MM"
   weeks: WeeklyAttendanceWeek[];
 }
+
+export interface UserAttendanceSummaryResponse {
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    image: string | null;
+  };
+  total_sessions: number;
+  sessions_attended: number;
+  attendance_rate: number;
+  recent_attendance: {
+    session_name: string;
+    date: string; // ISO format
+    status: "Present" | "Absent";
+  }[];
+  monthly_progress: {
+    month: string; // "YYYY-MM"
+    attendance_rate: number;
+  }[];
+}
+
+type RecentAttendance = {
+  session_name: string;
+  date: string;
+  status: string; // "Present"
+};
+
+type MonthlyProgress = {
+  month: string; // e.g. "2025-04"
+  attendance_rate: number;
+};
+
+export type UserAttendanceSummary = {
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    image: string | null;
+  };
+  organization_name: string;
+  total_sessions: number;
+  sessions_attended: number;
+  attendance_rate: number;
+  recent_attendance: RecentAttendance[];
+  monthly_progress: MonthlyProgress[];
+};

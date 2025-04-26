@@ -1,9 +1,9 @@
-import { UserDashboard } from "./_components/user-dashboard";
+import { OverviewPanel } from "./_components/overview-panel";
 
 export default function Page() {
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      <UserDashboard />
-    </div>
+    <>
+      <OverviewPanel />
+    </>
   );
 }

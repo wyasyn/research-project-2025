@@ -1,3 +1,4 @@
+"use client";
 /* eslint-disable @next/next/no-img-element */
 import { Calendar, Clock, User } from "lucide-react";
 
@@ -10,8 +11,22 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import { useEffect, useState } from "react";
+import { UserAttendanceSummary } from "@/types";
+import { fetchUserAttendanceSummary } from "../../supervisor/_components/attendance";
 
 export function OverviewPanel() {
+  const [data, setData] = useState<UserAttendanceSummary | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchUserAttendanceSummary()
+      .then(setData)
+      .catch((e) => setError(e.message));
+  }, []);
+
+  if (error) return <p className="text-red-500">Error: {error}</p>;
+  if (!data) return <p>Loading user attendance summary...</p>;
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
       <Card className="col-span-2">
@@ -27,17 +42,17 @@ export function OverviewPanel() {
           <div className="flex flex-col items-center gap-4 sm:flex-row">
             <div className="relative h-24 w-24 overflow-hidden rounded-full">
               <img
-                src="/placeholder.svg?height=96&width=96"
+                src={data.user.image || "/placeholder-image.jpg"}
                 alt="Profile picture"
                 className="aspect-square h-full w-full object-cover"
               />
             </div>
             <div className="space-y-1 text-center sm:text-left">
-              <h3 className="text-xl font-semibold">John Doe</h3>
+              <h3 className="text-xl font-semibold">{data.user.name}</h3>
+              <p className="text-sm text-muted-foreground">{data.user.email}</p>
               <p className="text-sm text-muted-foreground">
-                john.doe@example.com
+                {data.organization_name}
               </p>
-              <p className="text-sm text-muted-foreground">Acme Organization</p>
             </div>
           </div>
           <Separator className="my-4" />
@@ -47,19 +62,25 @@ export function OverviewPanel() {
               <span className="text-xs text-muted-foreground">
                 Total Sessions
               </span>
-              <span className="text-xl font-semibold">48</span>
+              <span className="text-xl font-semibold">
+                {data.total_sessions}
+              </span>
             </div>
             <div className="flex flex-col items-center gap-1 rounded-lg border p-3">
               <User className="h-5 w-5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">Attended</span>
-              <span className="text-xl font-semibold">42</span>
+              <span className="text-xl font-semibold">
+                {data.sessions_attended}
+              </span>
             </div>
             <div className="flex flex-col items-center gap-1 rounded-lg border p-3">
               <Clock className="h-5 w-5 text-muted-foreground" />
               <span className="text-xs text-muted-foreground">
                 Attendance Rate
               </span>
-              <span className="text-xl font-semibold">87.5%</span>
+              <span className="text-xl font-semibold">
+                {data.attendance_rate}%
+              </span>
             </div>
           </div>
         </CardContent>
@@ -71,33 +92,7 @@ export function OverviewPanel() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {[
-              {
-                date: "2023-03-15",
-                status: "Present",
-                session: "Morning Session",
-              },
-              {
-                date: "2023-03-14",
-                status: "Present",
-                session: "Afternoon Session",
-              },
-              {
-                date: "2023-03-13",
-                status: "Absent",
-                session: "Morning Session",
-              },
-              {
-                date: "2023-03-12",
-                status: "Present",
-                session: "Morning Session",
-              },
-              {
-                date: "2023-03-11",
-                status: "Present",
-                session: "Afternoon Session",
-              },
-            ].map((record, index) => (
+            {data.recent_attendance.map((record, index) => (
               <div key={index} className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div
@@ -111,7 +106,7 @@ export function OverviewPanel() {
                 </div>
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-muted-foreground">
-                    {record.session}
+                    {record.session_name}
                   </span>
                   <span
                     className={`text-sm ${
@@ -137,27 +132,17 @@ export function OverviewPanel() {
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">March 2023</span>
-                <span className="text-sm font-medium">87.5%</span>
+            {data.monthly_progress.map((record, index) => (
+              <div className="space-y-2" key={index}>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">{record.month}</span>
+                  <span className="text-sm font-medium">
+                    {record.attendance_rate}%
+                  </span>
+                </div>
+                <Progress value={record.attendance_rate} className="h-2" />
               </div>
-              <Progress value={87.5} className="h-2" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">February 2023</span>
-                <span className="text-sm font-medium">92%</span>
-              </div>
-              <Progress value={92} className="h-2" />
-            </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">January 2023</span>
-                <span className="text-sm font-medium">78%</span>
-              </div>
-              <Progress value={78} className="h-2" />
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>
