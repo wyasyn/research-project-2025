@@ -148,7 +148,8 @@ def get_user_details():
         return jsonify({"error": "User not found."}), 404
     
     user = {
-          "user_id": user.user_id,
+        "id": user.id,
+        "user_id": user.user_id,
         "name": user.name,
         "email": user.email,
         "image_url": user.image_url,

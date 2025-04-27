@@ -1,4 +1,11 @@
 "use server";
+import { z } from "zod";
+export const EditUserSchema = z.object({
+  user_id: z.string().optional(),
+  name: z.string().min(1, "Name is required").optional(),
+  email: z.string().email("Invalid email").optional(),
+  image_url: z.string().url("Invalid URL").optional(),
+});
 
 import { cache } from "react";
 import { cookies } from "next/headers";
@@ -177,6 +184,7 @@ export const getUser = async () => {
       return { error: data.error };
     }
     const user = data.user as {
+      id: number;
       user_id: string;
       name: string;
       email: string;
@@ -210,6 +218,50 @@ export const deleteUser = async (id: number) => {
 
     if (!response.ok) {
       return { error: `Failed to delete user: ${response.statusText}` };
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      return { error: data.error };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error(error);
+    return { error: error instanceof Error ? error.message : String(error) };
+  }
+};
+
+export const editUser = async (
+  userId: number,
+  formData: {
+    user_id?: string;
+    name?: string;
+    email?: string;
+    image_url?: string;
+  }
+) => {
+  try {
+    const cookieStore = await cookies();
+    const tokenObj = cookieStore.get("token");
+
+    if (!tokenObj?.value) {
+      return { error: "Authentication token is missing." };
+    }
+
+    const response = await fetch(`${serverApi}/users/edit/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${tokenObj?.value}`,
+      },
+      body: JSON.stringify(formData),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      return { error: `Failed to edit user: ${response.statusText}` };
     }
 
     const data = await response.json();

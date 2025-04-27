@@ -50,7 +50,7 @@ export default async function UserBtn() {
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuGroup>
-            <DashboardRoutes />
+            <DashboardRoutes userId={user.id} />
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <Logout />
