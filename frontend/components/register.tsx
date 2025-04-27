@@ -247,7 +247,7 @@ export default function RegisterForm() {
             Back
           </Button>
         )}
-        {step < 3 && (
+        {step < 2 && (
           <Button type="button" onClick={handleNext}>
             Next
           </Button>
