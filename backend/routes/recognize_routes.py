@@ -103,16 +103,17 @@ def recognize(session_id):
                         if dists[idx] < 0.5:
                             uid = known_user_ids[idx]
                             user = users.get(uid)
-                            if user and uid not in existing:
-                                rec = AttendanceRecord(session_id=session.id, user_id=uid)
-                                try:
-                                    db.session.add(rec)
-                                    db.session.commit()
-                                    existing.add(uid)
-                                    log.info("Marked attendance for user %s", uid)
-                                except Exception as e:
-                                    log.exception("Failed to mark attendance for user %s: %s", uid, e)
-                            name, color = user.name, GREEN
+                            if user:
+                                if uid not in existing:
+                                    rec = AttendanceRecord(session_id=session.id, user_id=uid)
+                                    try:
+                                        db.session.add(rec)
+                                        db.session.commit()
+                                        existing.add(uid)
+                                        log.info("Marked attendance for user %s", uid)
+                                    except Exception as e:
+                                        log.exception("Failed to mark attendance for user %s: %s", uid, e)
+                                name, color = user.name, GREEN
 
                     top, right, bottom, left = loc
                     cv2.rectangle(small, (left, top), (right, bottom), color, 2)

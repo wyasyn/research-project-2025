@@ -7,6 +7,7 @@ from routes.recognize_routes import recognize_bp
 from routes.attendance_routes import attendance_bp
 from routes.stats_routes import stats_bp
 from routes.organization_routes import organization_bp
+from routes.upload import upload_bp
 from flask_cors import CORS
 
 
@@ -25,6 +26,7 @@ def create_app():
     app.register_blueprint(attendance_bp, url_prefix='/attendance')
     app.register_blueprint(stats_bp, url_prefix='/stats')
     app.register_blueprint(organization_bp, url_prefix='/organizations')
+    app.register_blueprint(upload_bp, url_prefix='/upload')
 
     return app
 

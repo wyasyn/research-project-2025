@@ -1,5 +1,7 @@
 "use server";
 
+const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
+
 import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
 
 cloudinary.config({
@@ -8,7 +10,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export const uploadImage = async (imageFile: File) => {
+export const uploadImageToCloudinary = async (imageFile: File) => {
   if (!imageFile) {
     return { error: "No file uploaded" };
   }
@@ -41,5 +43,31 @@ export const uploadImage = async (imageFile: File) => {
   } catch (error) {
     console.error("Error uploading to Cloudinary:", error);
     return { error: "Error uploading image" };
+  }
+};
+
+export const uploadImage = async (imageFile: File) => {
+  if (!imageFile) {
+    return { error: "No file uploaded" };
+  }
+
+  const formData = new FormData();
+  formData.append("file", imageFile);
+
+  try {
+    const response = await fetch(`${serverApi}/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to upload image");
+    }
+
+    const data = await response.json();
+    return { imageUrl: data.url };
+  } catch (error) {
+    console.error("Error uploading to Flask:", error);
+    return { error: (error as Error).message || "Error uploading image" };
   }
 };
