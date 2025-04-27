@@ -115,11 +115,13 @@ export function ImageUpload({ onSubmit }: ImageUploadProps) {
     }
   }, [webcamRef]);
 
-  const handleSubmit = () => {
+  function handleSubmit(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
     if (image) {
       onSubmit(image);
     }
-  };
+  }
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
@@ -181,6 +183,7 @@ export function ImageUpload({ onSubmit }: ImageUploadProps) {
 
                 {!image && (
                   <Button
+                    type="button"
                     variant="outline"
                     onClick={triggerFileInput}
                     disabled={isUploading}
@@ -194,13 +197,18 @@ export function ImageUpload({ onSubmit }: ImageUploadProps) {
                 {image && (
                   <div className="flex gap-4">
                     <Button
+                      type="button"
                       variant="outline"
                       onClick={() => setImage(null)}
                       disabled={isUploading}
                     >
                       Change
                     </Button>
-                    <Button onClick={handleSubmit} disabled={isUploading}>
+                    <Button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={isUploading}
+                    >
                       Continue
                     </Button>
                   </div>
@@ -247,13 +255,18 @@ export function ImageUpload({ onSubmit }: ImageUploadProps) {
                 ) : (
                   <div className="flex gap-4">
                     <Button
+                      type="button"
                       variant="outline"
                       onClick={() => setImage(null)}
                       disabled={isUploading}
                     >
                       Retake
                     </Button>
-                    <Button onClick={handleSubmit} disabled={isUploading}>
+                    <Button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={isUploading}
+                    >
                       Continue
                     </Button>
                   </div>

@@ -7,15 +7,22 @@ import { editUser } from "@/lib/actions/users";
 import { EditUserSchema } from "@/types";
 
 type EditUserFormProps = {
-  userId: number; // The user id from the URL (path param)
+  userId: number;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    image_url: string;
+    user_id: string;
+  };
 };
 
-export default function EditUserForm({ userId }: EditUserFormProps) {
+export default function EditUserForm({ userId, user }: EditUserFormProps) {
   const [formData, setFormData] = useState({
-    user_id: "",
-    name: "",
-    email: "",
-    image_url: "",
+    user_id: user.user_id,
+    name: user.name,
+    email: user.email,
+    image_url: user.image_url,
   });
 
   const [error, setError] = useState<string | null>(null);

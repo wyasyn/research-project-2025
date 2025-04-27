@@ -1,4 +1,6 @@
 import EditUserForm from "@/components/EditUserForm";
+import { getUser } from "@/lib/actions/users";
+import { redirect } from "next/navigation";
 
 type SearchParams = Promise<{ id: string }>;
 export default async function SettingsPage(props: {
@@ -7,9 +9,16 @@ export default async function SettingsPage(props: {
   const searchParams = await props.searchParams;
 
   const id = searchParams.id;
+  const { user } = await getUser();
+  if (parseInt(id) !== user?.id) {
+    redirect("/");
+  }
+  if (!user) {
+    redirect("/login");
+  }
   return (
     <div className="p-8">
-      <EditUserForm userId={parseInt(id)} />
+      <EditUserForm user={user} userId={parseInt(id)} />
     </div>
   );
 }
