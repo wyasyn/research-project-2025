@@ -3,7 +3,8 @@
 import { useState } from "react";
 
 import { useRouter } from "next/navigation";
-import { editUser, EditUserSchema } from "@/lib/actions/users";
+import { editUser } from "@/lib/actions/users";
+import { EditUserSchema } from "@/types";
 
 type EditUserFormProps = {
   userId: number; // The user id from the URL (path param)

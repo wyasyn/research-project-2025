@@ -52,19 +52,19 @@ export const uploadImage = async (imageFile: File) => {
   }
 
   const formData = new FormData();
-  formData.append("file", imageFile);
+  formData.append("file", imageFile, imageFile.name);
 
   try {
-    const response = await fetch(`${serverApi}/upload`, {
+    const response = await fetch(`${serverApi}/upload/`, {
       method: "POST",
       body: formData,
     });
 
+    const data = await response.json();
     if (!response.ok) {
-      throw new Error("Failed to upload image");
+      throw new Error(data.message || "Unknown upload error");
     }
 
-    const data = await response.json();
     return { imageUrl: data.url };
   } catch (error) {
     console.error("Error uploading to Flask:", error);

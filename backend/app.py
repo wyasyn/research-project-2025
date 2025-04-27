@@ -51,5 +51,9 @@ def health_check():
 def page_not_found(e):
     return jsonify({"message": "Page not found", "error": str(e)}), 404
 
+@app.errorhandler(413)
+def request_entity_too_large(error):
+    return jsonify({"error": "File too large! Max size allowed is 16MB."}), 413
+
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0")

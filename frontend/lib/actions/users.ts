@@ -1,12 +1,4 @@
 "use server";
-import { z } from "zod";
-export const EditUserSchema = z.object({
-  user_id: z.string().optional(),
-  name: z.string().min(1, "Name is required").optional(),
-  email: z.string().email("Invalid email").optional(),
-  image_url: z.string().url("Invalid URL").optional(),
-});
-
 import { cache } from "react";
 import { cookies } from "next/headers";
 
@@ -257,7 +249,6 @@ export const editUser = async (
         Authorization: `Bearer ${tokenObj?.value}`,
       },
       body: JSON.stringify(formData),
-      credentials: "include",
     });
 
     if (!response.ok) {

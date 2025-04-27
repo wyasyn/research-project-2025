@@ -18,7 +18,6 @@ def create_organization():
     return jsonify({'message': 'Organization created successfully', 'organization': {'id': organization.id, 'name': organization.name}}), 201
 
 @organization_bp.route('/', methods=['GET'])
-@jwt_required()
 def get_organizations():
     organizations = Organization.query.all()
     return jsonify({'organizations': [{'id': org.id, 'name': org.name, 'description': org.description} for org in organizations]}), 200

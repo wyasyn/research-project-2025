@@ -16,7 +16,7 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
-@upload_bp.route("/upload", methods=["POST"])
+@upload_bp.route("/", methods=["POST"])
 def upload_image():
     if 'file' not in request.files:
         return jsonify({"message": "No file part in request."}), 400
@@ -37,12 +37,11 @@ def upload_image():
     # Save the file
     file.save(save_path)
 
-    # Assuming you serve uploads via `/uploads/<filename>`
     image_url = f"{request.url_root.rstrip('/')}/upload/{filename}"
     
     return jsonify({"url": image_url}), 201
 
 
-@upload_bp.route('/upload/<path:filename>')
+@upload_bp.route('/<path:filename>')
 def uploaded_file(filename):
     return send_from_directory('uploads', filename)

@@ -101,3 +101,10 @@ export type UserAttendanceSummary = {
   recent_attendance: RecentAttendance[];
   monthly_progress: MonthlyProgress[];
 };
+
+export const EditUserSchema = z.object({
+  user_id: z.string().optional(),
+  name: z.string().min(1, "Name is required").optional(),
+  email: z.string().email("Invalid email").optional(),
+  image_url: z.string().url("Invalid URL").optional(),
+});

@@ -34,16 +34,20 @@ export function ImageUpload({ onSubmit }: ImageUploadProps) {
       setError(null);
       setIsUploading(true);
 
-      // Compress the image to ensure it's under 100kB
       const compressedFile = await imageCompression(file, {
-        maxSizeMB: 0.1, // 100kB
+        maxSizeMB: 0.8,
         maxWidthOrHeight: 800,
         useWebWorker: true,
       });
 
-      // Upload to Cloudinary
+      const fileExt = compressedFile.type.split("/")[1];
+      const namedFile = new File(
+        [compressedFile],
+        `upload_${Date.now()}.${fileExt}`,
+        { type: compressedFile.type }
+      );
 
-      const { imageUrl, error } = await uploadImage(compressedFile);
+      const { imageUrl, error } = await uploadImage(namedFile);
       if (error) {
         setError("Failed to upload image");
         return;
@@ -81,14 +85,19 @@ export function ImageUpload({ onSubmit }: ImageUploadProps) {
       const compressedFile = await imageCompression(
         new File([blob], "webcam.jpg", { type: "image/jpeg" }),
         {
-          maxSizeMB: 0.1, // 100kB
+          maxSizeMB: 0.8,
           maxWidthOrHeight: 800,
           useWebWorker: true,
         }
       );
 
-      // Upload to Cloudinary
-      const { imageUrl, error } = await uploadImage(compressedFile);
+      const fileExt = compressedFile.type.split("/")[1];
+      const namedFile = new File(
+        [compressedFile],
+        `upload_${Date.now()}.${fileExt}`,
+        { type: compressedFile.type }
+      );
+      const { imageUrl, error } = await uploadImage(namedFile);
 
       if (error) {
         setError("Failed to capture or upload image");

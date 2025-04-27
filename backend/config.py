@@ -15,6 +15,7 @@ SECRET_KEY=os.getenv('SECRET_KEY')
 def configure_db(app):
     app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024 
     db.init_app(app)
 
 
