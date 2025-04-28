@@ -1,0 +1,56 @@
+services:
+  # Backend Flask service
+  backend:
+    image: yasyn/attendance-backend
+    container_name: attendance-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    env_file:
+      - ./backend/.env
+    ports:
+      - "5000:5000"
+    depends_on:
+      - db
+    volumes:
+      - uploads-data:/uploads
+    networks:
+      - attendance-network
+
+  # Next.js frontend service
+  frontend:
+    image: yasyn/attendance-frontend
+    container_name: attendance-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - attendance-network
+
+  # PostgreSQL database service
+  db:
+    image: postgres:16-alpine
+    container_name: attendance-db
+    restart: always
+    env_file:
+      - ./backend/.env
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - attendance-network
+
+# Volumes to persist data
+volumes:
+  postgres-data:
+  uploads-data: # Volume for uploaded images
+
+# Network for the services to communicate
+networks:
+  attendance-network:
+    driver: bridge
