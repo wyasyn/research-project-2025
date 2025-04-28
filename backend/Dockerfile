@@ -3,11 +3,12 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies needed for dlib, psycopg2, etc.
+# Install system dependencies needed for dlib, psycopg2, OpenCV, etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ cmake \
     libopenblas-dev liblapack-dev \
     libpq-dev \
+    libgl1 \
     netcat-openbsd \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -29,6 +30,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev liblapack-dev \
     libpq-dev \
+    libgl1 \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
