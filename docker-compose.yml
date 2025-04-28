@@ -12,7 +12,8 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     volumes:
       - uploads-data:/uploads
     networks:
@@ -38,19 +39,26 @@ services:
     image: postgres:17-alpine
     container_name: attendance-db
     restart: always
-    env_file:
-      - ./backend/.env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: yasyn19
+      POSTGRES_DB: attendance_db
     ports:
       - "5433:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
       - attendance-network
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 # Volumes to persist data
 volumes:
   postgres-data:
-  uploads-data: # Volume for uploaded images
+  uploads-data:
 
 # Network for the services to communicate
 networks:
