@@ -1,0 +1,41 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore environment
+# .env
+# .env.*
+
+# Ignore virtual environments
+venv/
+env/
+*.egg-info/
+
+# Ignore system files
+.DS_Store
+Thumbs.db
+
+# Ignore git files
+.git/
+.gitignore
+
+# Ignore editor/IDE files
+.vscode/
+.idea/
+
+# Ignore test files (optional)
+tests/
+*.test.*
+*.spec.*
+
+# Ignore local artifacts
+*.log
+*.bak
+
+# If you have migrations but want to rebuild them clean, optionally ignore
+migrations/
+# __init__.py
+*.sqlite3
+upload/
