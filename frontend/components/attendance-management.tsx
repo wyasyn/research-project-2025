@@ -19,6 +19,7 @@ import { getUsers } from "@/lib/actions/users";
 import { getSessionDetails } from "@/app/dashboard/supervisor/_components/attendance";
 import { AttendanceRecord } from "@/types";
 import { CameraSelector } from "./camera-selector";
+import AttendanceControl from "./attendance-control";
 
 interface User {
   id: number;
@@ -97,9 +98,10 @@ export function AttendanceManagement({ sessionId }: AttendanceManagementProps) {
 
   return (
     <Tabs defaultValue="manual" className="w-full">
-      <TabsList className="grid w-full grid-cols-2">
+      <TabsList className="grid w-full grid-cols-3">
         <TabsTrigger value="manual">Manual Attendance</TabsTrigger>
         <TabsTrigger value="recognition">Face Recognition</TabsTrigger>
+        <TabsTrigger value="external">External Window</TabsTrigger>
       </TabsList>
 
       <TabsContent value="manual" className="space-y-6">
@@ -234,6 +236,28 @@ export function AttendanceManagement({ sessionId }: AttendanceManagementProps) {
                 </Button>
               </div>
             )}
+          </CardContent>
+        </Card>
+      </TabsContent>
+      <TabsContent value="external">
+        <Card className="max-w-[700px] mx-auto mt-12">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Camera className="mr-2 h-5 w-5" />
+              External Window
+            </CardTitle>
+            <CardDescription>
+              Mark attendance automatically using face recognition
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CameraSelector
+              onSelect={(deviceId, index) => setSelectedCameraIndex(index)}
+            />
+            <AttendanceControl
+              cameraIndex={selectedCameraIndex}
+              sessionId={sessionId}
+            />
           </CardContent>
         </Card>
       </TabsContent>

@@ -1,127 +1,74 @@
 import os
 import time
 import logging
-from io import BytesIO
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from urllib.parse import urlparse
+from concurrent.futures import ProcessPoolExecutor
 
+import cv2
 import face_recognition
-from PIL import Image
-
 from config import db
 from models import User
 
-# ─────────────────────────────────────────────────────────
-# Configuration
-# ─────────────────────────────────────────────────────────
-
 log = logging.getLogger(__name__)
-known_faces_cache: dict[int, dict] = {}  # org_id → { timestamp, data: (encodings, names) }
-CACHE_TTL = 3600            # seconds before cache expires
-THREAD_POOL_SIZE = 8        # for parallel processing
-THUMBNAIL_SIZE = (256, 256) # resize for speed
-JPEG_QUALITY = 90           # buffer quality
-UPLOAD_FOLDER = os.path.join(os.getcwd(), 'uploads')  # local image storage
 
-# Ensure the upload folder exists
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+# Cache: org_id -> { timestamp, data: (encodings, ids) }
+known_faces_cache: dict[int, dict] = {}
+CACHE_TTL = 24 * 3600  # 24h
+MAX_WORKERS = os.cpu_count() or 4
+THUMBNAIL_SIZE = (128, 128)
 
-# ─────────────────────────────────────────────────────────
 # Helpers
-# ─────────────────────────────────────────────────────────
 
-def extract_filename_from_url(url: str) -> str:
-    """
-    Extracts the filename from a full upload URL.
-    e.g. https://domain.com/uploads/foo.jpg → foo.jpg
-    """
-    parsed = urlparse(url)
-    return os.path.basename(parsed.path)
+def _extract_filename(url: str) -> str:
+    return os.path.basename(urlparse(url).path)
 
-# ─────────────────────────────────────────────────────────
-# Internal worker
-# ─────────────────────────────────────────────────────────
 
-def _process_user_face(user_id: int, image_filename: str) -> tuple[int, list]:
-    """
-    Load a local image file for a user, resize, and extract face encodings.
-    :returns: (user_id, list_of_encodings) or (user_id, [])
-    """
-    try:
-        file_path = os.path.join(UPLOAD_FOLDER, image_filename)
-        if not os.path.exists(file_path):
-            log.error("Image file not found for user_id=%s: %s", user_id, file_path)
-            return user_id, []
-
-        img = Image.open(file_path).convert("RGB")
-        img.thumbnail(THUMBNAIL_SIZE, Image.LANCZOS)
-
-        buf = BytesIO()
-        img.save(buf, format="JPEG", quality=JPEG_QUALITY)
-        buf.seek(0)
-
-        face_img = face_recognition.load_image_file(buf)
-        encs = face_recognition.face_encodings(face_img)
-        if not encs:
-            log.warning("No face found in image for user_id=%s", user_id)
-        return user_id, encs
-
-    except Exception:
-        log.exception("Unexpected error processing face for user_id=%s", user_id)
+def _process_user_face(args):
+    """Loads image via cv2, resizes, and encodes face."""
+    user_id, image_fname = args
+    file_path = os.path.join('uploads', image_fname)
+    if not os.path.isfile(file_path):
         return user_id, []
 
-# ─────────────────────────────────────────────────────────
-# Public API
-# ─────────────────────────────────────────────────────────
+    img = cv2.imread(file_path)
+    if img is None:
+        return user_id, []
+    # downsample
+    small = cv2.resize(img, THUMBNAIL_SIZE)
+    rgb = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+    encs = face_recognition.face_encodings(rgb)
+    return user_id, encs
 
-def load_known_faces(organization_id: int, force_reload: bool = False) -> tuple[list, list]:
+
+def load_known_faces(organization_id: int, force_reload: bool = False):
     """
-    Load and cache face encodings and corresponding user IDs for an organization.
-
-    :param organization_id: ID of the organization to scope users by.
-    :param force_reload: bypass cache if True.
-    :returns: (known_face_encodings, known_face_user_ids)
+    Returns (encodings, ids) for an org, using ProcessPool and cv2 for speed.
     """
     now = time.time()
     cache = known_faces_cache.get(organization_id)
-    if not force_reload and cache and (now - cache["timestamp"] < CACHE_TTL):
-        return cache["data"]
+    # If cache valid and not forcing, return immediately
+    if cache and not force_reload and now - cache['timestamp'] < CACHE_TTL:
+        return cache['data']
 
-    # Query DB for users with an image URL
-    rows = (
-        db.session.query(User.id, User.image_url)
-        .filter(User.organization_id == organization_id,
-                User.image_url.isnot(None))
-        .all()
-    )
+    # Query only id and url
+    rows = db.session.query(User.id, User.image_url) \
+        .filter_by(organization_id=organization_id) \
+        .filter(User.image_url.isnot(None)).all()
 
-    encodings: list = []
-    names: list[int] = []
+    tasks = []
+    for uid, url in rows:
+        fname = _extract_filename(url)
+        tasks.append((uid, fname))
 
-    # Parallel processing
-    with ThreadPoolExecutor(max_workers=THREAD_POOL_SIZE) as executor:
-        futures = {
-            executor.submit(
-                _process_user_face,
-                uid,
-                extract_filename_from_url(url)
-            ): uid
-            for uid, url in rows
-        }
-        for fut in as_completed(futures):
-            uid, face_encs = fut.result()
-            if face_encs:
-                encodings.extend(face_encs)
-                names.extend([uid] * len(face_encs))
+    encs, ids = [], []
+    with ProcessPoolExecutor(max_workers=MAX_WORKERS) as pool:
+        futures = pool.map(_process_user_face, tasks)
+        for uid, face_list in futures:
+            for e in face_list:
+                encs.append(e)
+                ids.append(uid)
 
-    # Cache results
-    known_faces_cache[organization_id] = {
-        "timestamp": now,
-        "data": (encodings, names)
-    }
-
-    log.info(
-        "Loaded faces for org=%s: %d users, %d encodings",
-        organization_id, len(rows), len(encodings)
-    )
-    return encodings, names
+    # Cache and return
+    known_faces_cache[organization_id] = {'timestamp': now, 'data': (encs, ids)}
+    log.info("Loaded %d face encodings for org %s", len(encs), organization_id)
+    return encs, ids

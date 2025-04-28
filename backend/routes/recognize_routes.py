@@ -6,7 +6,7 @@ import time
 import cv2
 import numpy as np
 import face_recognition
-from flask import Blueprint, Response, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 
 from config import db
 from models import AttendanceSession, AttendanceRecord, User
@@ -15,153 +15,195 @@ from utils.face_utils import load_known_faces
 log = logging.getLogger(__name__)
 recognize_bp = Blueprint('recognize', __name__)
 
-@recognize_bp.route("/<int:session_id>", methods=["GET"])
+
+def _draw_labels(frame: np.ndarray, locs: list, names: list[str]) -> np.ndarray:
+    """
+    Draw bounding boxes and names on the frame at its native resolution.
+    """
+    for (top, right, bottom, left), name in zip(locs, names):
+        color = (0, 255, 0) if name != "Unknown" else (0, 0, 255)
+        cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
+        cv2.rectangle(frame, (left, top - 20), (right, top), color, cv2.FILLED)
+        cv2.putText(
+            frame,
+            name,
+            (left + 6, top - 6),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 255, 255),
+            1
+        )
+    return frame
+
+
+def _play_alert():
+    """Beep on no-face timeout."""
+    if platform.system() == "Windows":
+        import winsound; winsound.Beep(1000, 500)
+    elif platform.system() == "Darwin":
+        os.system('say "No face detected"')
+    else:
+        os.system('echo -e "\a"')
+
+
+@recognize_bp.route("/window/<int:session_id>", methods=["GET"])
 def recognize(session_id):
-    # ─── 1. Load session ──────────────────────────────
+    """
+    Real-time face recognition via OpenCV window for an attendance session.
+    Press 'q' to end, or auto-stop after `timeout` seconds of no detection.
+    Query params:
+      camera: camera index (default 0)
+      timeout: seconds to auto-stop on no face (default 30)
+    """
     session = AttendanceSession.query.get(session_id)
     if not session:
         return jsonify({"message": "Attendance session not found."}), 404
 
-    org_id = session.organization_id
+    known_encs, known_ids = load_known_faces(session.organization_id)
+    users = {u.id: u for u in User.query.filter_by(organization_id=session.organization_id)}
+    existing = {r.user_id for r in AttendanceRecord.query.filter_by(session_id=session.id)}
 
-    # ─── 2. Load known faces (cached, parallel) ──────
-    known_encs, known_user_ids = load_known_faces(org_id)
-
-    # ─── 3. Pre-load users & existing attendance ──────
-    users = {
-        u.id: u for u in User.query
-                                .filter_by(organization_id=org_id)
-                                .all()
-    }
-    existing = {
-        r.user_id for r in AttendanceRecord.query
-                                           .filter_by(session_id=session.id)
-                                           .all()
-    }
-
-    # ─── 4. Open camera ───────────────────────────────
-    cam_idx = int(request.args.get("camera", 0))
+    cam_idx = int(request.args.get('camera', 0))
+    timeout_s = int(request.args.get('timeout', 30))
     cap = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
     if not cap.isOpened():
-        log.error("Webcam index %d not accessible", cam_idx)
-        return jsonify({"message": f"Failed to access webcam {cam_idx}"}), 500
+        log.error("Cannot open camera %s", cam_idx)
+        return jsonify({"message": "Failed to access camera."}), 500
 
-    # ─── 5. Constants & state ─────────────────────────
-    GREEN = (0, 255, 0)
-    RED   = (0,   0, 255)
-    WHITE = (255,255,255)
+    last_detect = time.time()
 
-    prev_time = time.time()
-    no_face_since = prev_time
-    TIMEOUT = 30  # seconds to auto-stop
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                log.warning("Failed to grab frame for session %s", session_id)
+                break
 
-    def _play_alert():
-        """Beep on timeout."""
-        if platform.system() == "Windows":
-            import winsound
-            winsound.Beep(1000, 500)
-        else:
-            if platform.system() == "Darwin":
-                os.system('say "No face detected"')
-            else:
-                os.system('echo -e "\a"')
+            rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            locs = face_recognition.face_locations(rgb)
+            encs = face_recognition.face_encodings(rgb, locs)
 
-    # ─── 6. Video stream generator ────────────────────
+            if locs:
+                last_detect = time.time()
+            elif time.time() - last_detect > timeout_s:
+                _play_alert()
+                break
+
+            names = []
+            for fe in encs:
+                name = "Unknown"
+                if known_encs:
+                    dists = face_recognition.face_distance(known_encs, fe)
+                    idx = np.argmin(dists)
+                    if dists[idx] < 0.5:
+                        uid = known_ids[idx]
+                        user = users.get(uid)
+                        if user:
+                            if uid not in existing:
+                                try:
+                                    rec = AttendanceRecord(session_id=session.id, user_id=uid)
+                                    db.session.add(rec)
+                                    db.session.commit()
+                                    existing.add(uid)
+                                    log.info("Recorded %s in session %s", uid, session_id)
+                                except Exception:
+                                    log.exception("Error recording attendance")
+                            name = user.name
+                names.append(name)
+
+            annotated = _draw_labels(frame.copy(), locs, names)
+            cv2.imshow(f"Session {session.id}", annotated)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
+    finally:
+        cap.release()
+        cv2.destroyAllWindows()
+        log.info("Session %s recognition ended", session_id)
+
+    return jsonify({"message": "Recognition ended."})
+
+
+@recognize_bp.route("/<int:session_id>", methods=["GET"])
+def stream(session_id):
+    """
+    MJPEG browser stream: detects at lower res, then draws labels on full-resolution frame.
+    Query params:
+      camera (int): camera index (default 0)
+      skip (int): detect every nth frame (default 3)
+      quality (int): JPEG quality 0-100 (default 50)
+    """
+    session = AttendanceSession.query.get(session_id)
+    if not session:
+        return jsonify({"message": "Session not found."}), 404
+
+    known_encs, known_ids = load_known_faces(session.organization_id)
+    users = {u.id: u for u in User.query.filter_by(organization_id=session.organization_id)}
+    existing = {r.user_id for r in AttendanceRecord.query.filter_by(session_id=session.id)}
+
+    cam_idx = int(request.args.get('camera', 0))
+    skip = int(request.args.get('skip', 3))
+    quality = int(request.args.get('quality', 50))
+
+    cap = cv2.VideoCapture(cam_idx, cv2.CAP_DSHOW)
+    if not cap.isOpened():
+        return jsonify({"message": "Cannot open camera."}), 500
+
     def generate():
-        nonlocal prev_time, no_face_since
+        frame_count = 0
+        last_locs, last_names = [], []
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            frame_count += 1
 
-        try:
-            while True:
-                ok, frame = cap.read()
-                if not ok:
-                    log.warning("Frame read failed, stopping")
-                    break
+            # Prepare small frame for detection
+            small = cv2.resize(frame, (320, 240))
+            rgb_small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
 
-                # Resize + convert
-                small = cv2.resize(frame, (800, 600))
-                rgb   = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
-
-                # Detect & encode
-                locs = face_recognition.face_locations(rgb, model='hog')
-                encs = face_recognition.face_encodings(rgb, locs)
-
-                # Timeout logic
-                now = time.time()
-                if locs:
-                    no_face_since = now
-                elif now - no_face_since > TIMEOUT:
-                    log.info("No face for %ds → timeout, stopping", TIMEOUT)
-                    _play_alert()
-                    break
-
-                # Draw boxes & mark attendance immediately per detection
-                for fe, loc in zip(encs, locs):
-                    name, color = "Unknown", RED
+            # Detection & record every skip frames
+            if frame_count % skip == 0:
+                locs = face_recognition.face_locations(rgb_small)
+                encs = face_recognition.face_encodings(rgb_small, locs)
+                names = []
+                for fe in encs:
+                    name = "Unknown"
                     if known_encs:
                         dists = face_recognition.face_distance(known_encs, fe)
-                        idx   = np.argmin(dists)
+                        idx = np.argmin(dists)
                         if dists[idx] < 0.5:
-                            uid = known_user_ids[idx]
+                            uid = known_ids[idx]
                             user = users.get(uid)
-                            if user:
-                                if uid not in existing:
+                            if user and uid not in existing:
+                                try:
                                     rec = AttendanceRecord(session_id=session.id, user_id=uid)
-                                    try:
-                                        db.session.add(rec)
-                                        db.session.commit()
-                                        existing.add(uid)
-                                        log.info("Marked attendance for user %s", uid)
-                                    except Exception as e:
-                                        log.exception("Failed to mark attendance for user %s: %s", uid, e)
-                                name, color = user.name, GREEN
+                                    db.session.add(rec)
+                                    db.session.commit()
+                                    existing.add(uid)
+                                except Exception:
+                                    pass
+                            name = user.name if user else "Unknown"
+                    names.append(name)
+                last_locs, last_names = locs, names
 
-                    top, right, bottom, left = loc
-                    cv2.rectangle(small, (left, top), (right, bottom), color, 2)
-                    cv2.rectangle(
-                        small,
-                        (left, top - 20),
-                        (right, top),
-                        color,
-                        cv2.FILLED
-                    )
-                    cv2.putText(
-                        small,
-                        name,
-                        (left + 6, top - 6),
-                        cv2.FONT_HERSHEY_SIMPLEX,
-                        0.5,
-                        WHITE,
-                        1
-                    )
+            # Scale locations to full frame
+            h_ratio = frame.shape[0] / 240
+            w_ratio = frame.shape[1] / 320
+            scaled_locs = [(
+                int(top * h_ratio),
+                int(right * w_ratio),
+                int(bottom * h_ratio),
+                int(left * w_ratio)
+            ) for (top, right, bottom, left) in last_locs]
 
-                # FPS counter
-                curr = time.time()
-                fps  = 1.0 / (curr - prev_time)
-                prev_time = curr
-                cv2.putText(
-                    small,
-                    f"FPS: {fps:.1f}",
-                    (10, 30),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.7,
-                    WHITE,
-                    2
-                )
+            # Draw on full-resolution frame
+            annotated_full = _draw_labels(frame.copy(), scaled_locs, last_names)
 
-                # Encode & yield
-                ret, jpg = cv2.imencode('.jpg', small, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
-                if not ret:
-                    continue
+            ret2, jpg = cv2.imencode('.jpg', annotated_full, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+            if not ret2:
+                continue
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + jpg.tobytes() + b'\r\n')
+        cap.release()
 
-                yield (
-                    b'--frame\r\n'
-                    b'Content-Type: image/jpeg\r\n\r\n' +
-                    jpg.tobytes() +
-                    b'\r\n'
-                )
-        finally:
-            cap.release()
-            log.info("Camera released, stream ending")
-
-    return Response(generate(),
-                    mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')

@@ -237,8 +237,8 @@ export function ImageUpload({ onSubmit }: ImageUploadProps) {
                       ref={webcamRef}
                       screenshotFormat="image/jpeg"
                       videoConstraints={{
-                        width: 320,
-                        height: 240,
+                        width: 800,
+                        height: 600,
                         facingMode: "user",
                       }}
                       className="h-[240px] w-[320px]"
