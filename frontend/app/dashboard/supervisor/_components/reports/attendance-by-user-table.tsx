@@ -37,36 +37,36 @@ export function AttendanceByUserTable() {
       </TableHeader>
       <TableBody>
         {data.map((user) => (
-          <TableRow key={user.user_id}>
+          <TableRow key={user.user.id}>
             <TableCell className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={user.image_url || "/placeholder-image.jpg"}
-                  alt={user.name}
+                  src={user.user.image || "/placeholder-image.jpg"}
+                  alt={user.user.name}
                 />
-                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{user.user.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium">{user.name}</div>
+                <div className="font-medium">{user.user.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {user.email}
+                  {user.user.email}
                 </div>
               </div>
             </TableCell>
             <TableCell>{user.total_sessions}</TableCell>
-            <TableCell>{user.attended_sessions}</TableCell>
+            <TableCell>{user.sessions_attended}</TableCell>
 
             <TableCell>
               <Badge
                 variant={
-                  user.attendance_percentage >= 80
+                  user.attendance_rate >= 80
                     ? "default"
-                    : user.attendance_percentage >= 60
+                    : user.attendance_rate >= 60
                     ? "secondary"
                     : "destructive"
                 }
               >
-                {user.attendance_percentage}%
+                {user.attendance_rate}%
               </Badge>
             </TableCell>
           </TableRow>
