@@ -1,30 +1,46 @@
-# Use an official Python runtime as a parent image
-FROM python:3.12-slim
+# Stage 1: Builder
+FROM python:3.12-slim AS builder
 
-# Set environment variables
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-ENV FLASK_ENV=production
-
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies for psycopg2, etc.
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev netcat \
+    gcc libpq-dev netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt .
-RUN pip install --upgrade pip
-RUN pip install gunicorn
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip && \
+    pip install --prefix=/install -r requirements.txt
 
-# Copy project files
+# Stage 2: Final minimal image
+FROM python:3.12-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+
+# Set work directory
+WORKDIR /app
+
+# Install runtime dependencies (only needed things)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev netcat-openbsd \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy installed Python packages
+COPY --from=builder /install /usr/local
+
+# Copy app code
 COPY . .
 
-# Expose the port (default for Gunicorn)
+# Make port 5000 available (optional)
 EXPOSE 5000
 
-# Entry point for production (using Gunicorn)
+# Entrypoint for waiting on database (optional)
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+
+# Default command
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
