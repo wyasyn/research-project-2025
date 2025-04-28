@@ -3,9 +3,13 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install system dependencies needed for dlib, psycopg2, etc.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc libpq-dev netcat-openbsd \
+    gcc g++ cmake \
+    libopenblas-dev liblapack-dev \
+    libpq-dev \
+    netcat-openbsd \
+    build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
@@ -19,12 +23,13 @@ FROM python:3.12-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Set work directory
 WORKDIR /app
 
-# Install runtime dependencies (only needed things)
+# Install runtime dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpq-dev netcat-openbsd \
+    libopenblas-dev liblapack-dev \
+    libpq-dev \
+    netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy installed Python packages
@@ -33,14 +38,14 @@ COPY --from=builder /install /usr/local
 # Copy app code
 COPY . .
 
-# Make port 5000 available (optional)
+# Expose port
 EXPOSE 5000
 
-# Entrypoint for waiting on database (optional)
+# Entrypoint script (optional for waiting DB)
 COPY docker-entrypoint.sh /docker-entrypoint.sh
 RUN chmod +x /docker-entrypoint.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 
-# Default command
+# Default command to run your app
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
