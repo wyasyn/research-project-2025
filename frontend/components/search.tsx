@@ -67,6 +67,7 @@ export default function Search() {
       setResults([]);
       setError(null);
       setSelectedIndex(-1);
+      setActiveCategory("all"); // Reset to "all" category when closing
     } else {
       // Focus the input when dialog opens
       setTimeout(() => {
@@ -74,6 +75,24 @@ export default function Search() {
       }, 0);
     }
   }, [open]);
+
+  // Filter results based on active category
+  const getFilteredResults = () => {
+    console.log("Getting filtered results. Active category:", activeCategory);
+    console.log("All results:", results);
+
+    if (activeCategory === "all") {
+      console.log("Returning all results:", results);
+      return results;
+    }
+
+    const filtered = results.filter((user) => user.role === activeCategory);
+    console.log("Filtered results:", filtered);
+    return filtered;
+  };
+
+  // Compute filtered results on each render
+  const filteredResults = getFilteredResults();
 
   // Debounced search function
   const debouncedSearchFn = React.useMemo(
@@ -92,12 +111,15 @@ export default function Search() {
           const { users, error } = await searchUser(searchTerm);
           if (error) {
             setError(error);
-          } else {
-            setResults(users || []);
+          }
+          if (users) {
+            console.log("Fetched users:", users);
+            setResults(users);
             // Reset selected index when new results come in
             setSelectedIndex(-1);
           }
-        } catch {
+        } catch (err) {
+          console.error("Search error:", err);
           setError("Failed to fetch results.");
         } finally {
           setLoading(false);
@@ -122,14 +144,22 @@ export default function Search() {
     inputRef.current?.focus();
   };
 
+  // Handle category change
+  const handleCategoryChange = (category: SearchCategory) => {
+    console.log("Changing category from", activeCategory, "to", category);
+    setActiveCategory(category);
+    // Reset selected index when changing categories
+    setSelectedIndex(-1);
+  };
+
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    const filteredResults = getFilteredResults();
+    const currentFilteredResults = filteredResults;
 
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setSelectedIndex((prev) =>
-        prev < filteredResults.length - 1 ? prev + 1 : prev
+        prev < currentFilteredResults.length - 1 ? prev + 1 : prev
       );
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -137,10 +167,10 @@ export default function Search() {
     } else if (
       e.key === "Enter" &&
       selectedIndex >= 0 &&
-      selectedIndex < filteredResults.length
+      selectedIndex < currentFilteredResults.length
     ) {
       e.preventDefault();
-      handleSelectUser(filteredResults[selectedIndex]);
+      handleSelectUser(currentFilteredResults[selectedIndex]);
     }
   };
 
@@ -150,12 +180,6 @@ export default function Search() {
     console.log("Selected user:", user);
     setOpen(false);
     // Example: router.push(`/users/${user.id}`);
-  };
-
-  // Filter results based on active category
-  const getFilteredResults = (): UserResult[] => {
-    if (activeCategory === "all") return results;
-    return results.filter((user) => user.role === activeCategory);
   };
 
   // Get role counts
@@ -175,7 +199,6 @@ export default function Search() {
     return counts;
   };
 
-  const filteredResults = getFilteredResults();
   const hasResults = results.length > 0;
   const roleCounts = getRoleCounts();
 
@@ -188,6 +211,12 @@ export default function Search() {
       setError(null);
     }
   }, [query, handleSearch]);
+
+  // Force re-render when activeCategory changes
+  React.useEffect(() => {
+    console.log("Active category changed to:", activeCategory);
+    // The empty dependency array ensures this runs only when activeCategory changes
+  }, [activeCategory]);
 
   // Get role icon based on user role
   const getRoleIcon = (role: string) => {
@@ -261,13 +290,22 @@ export default function Search() {
           )}
         </div>
 
+        {/* Debug information */}
+        {query.length > 0 && hasResults && (
+          <div className=" p-2 text-xs">
+            <div>Active Category: {activeCategory}</div>
+            <div>Total Results: {results.length}</div>
+            <div>Filtered Results: {filteredResults.length}</div>
+          </div>
+        )}
+
         {query.length > 0 && hasResults && (
           <div className="border-b">
             <div className="flex items-center gap-2 p-2">
               <Badge
                 variant={activeCategory === "all" ? "default" : "outline"}
                 className="cursor-pointer"
-                onClick={() => setActiveCategory("all")}
+                onClick={() => handleCategoryChange("all")}
               >
                 All ({results.length})
               </Badge>
@@ -275,7 +313,7 @@ export default function Search() {
                 <Badge
                   variant={activeCategory === "admin" ? "default" : "outline"}
                   className="cursor-pointer flex items-center gap-1"
-                  onClick={() => setActiveCategory("admin")}
+                  onClick={() => handleCategoryChange("admin")}
                 >
                   <ShieldCheck className="h-3 w-3" />
                   <span>Admins ({roleCounts.admin})</span>
@@ -287,7 +325,7 @@ export default function Search() {
                     activeCategory === "supervisor" ? "secondary" : "outline"
                   }
                   className="cursor-pointer flex items-center gap-1"
-                  onClick={() => setActiveCategory("supervisor")}
+                  onClick={() => handleCategoryChange("supervisor")}
                 >
                   <Users className="h-3 w-3" />
                   <span>Supervisors ({roleCounts.supervisor})</span>
@@ -297,7 +335,7 @@ export default function Search() {
                 <Badge
                   variant={activeCategory === "user" ? "outline" : "outline"}
                   className="cursor-pointer flex items-center gap-1"
-                  onClick={() => setActiveCategory("user")}
+                  onClick={() => handleCategoryChange("user")}
                 >
                   <User className="h-3 w-3" />
                   <span>Users ({roleCounts.user})</span>
@@ -324,20 +362,40 @@ export default function Search() {
             </div>
           )}
 
-          <CommandEmpty className="py-6 text-center text-sm">
-            {query.length > 0 ? (
-              <div className="space-y-1">
-                <p>No results found for &quot;{query}&quot;</p>
-                <p className="text-xs text-muted-foreground">
-                  Try a different search term
-                </p>
-              </div>
-            ) : (
-              <p className="text-muted-foreground">Start typing to search...</p>
+          {!loading &&
+            !error &&
+            query.length > 0 &&
+            filteredResults.length === 0 && (
+              <CommandEmpty className="py-6 text-center text-sm">
+                <div className="space-y-1">
+                  <p>No results found for &quot;{query}&quot;</p>
+                  {activeCategory !== "all" && (
+                    <p>
+                      No {activeCategory}s found.{" "}
+                      <button
+                        type="button"
+                        className="text-primary underline"
+                        onClick={() => handleCategoryChange("all")}
+                      >
+                        View all results
+                      </button>
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Try a different search term
+                  </p>
+                </div>
+              </CommandEmpty>
             )}
-          </CommandEmpty>
 
-          {hasResults && (
+          {!loading && !error && query.length === 0 && (
+            <CommandEmpty className="py-6 text-center text-sm">
+              <p className="text-muted-foreground">Start typing to search...</p>
+            </CommandEmpty>
+          )}
+
+          {/* Always render the command group if we have filtered results */}
+          {!loading && !error && filteredResults.length > 0 && (
             <CommandGroup
               heading={
                 activeCategory === "all"
@@ -391,7 +449,7 @@ export default function Search() {
             </CommandGroup>
           )}
 
-          {query.length > 0 && hasResults && (
+          {query.length > 0 && filteredResults.length > 0 && (
             <div className="border-t p-2 text-center text-xs text-muted-foreground">
               <div className="flex items-center justify-center gap-1">
                 <ArrowUpDown className="h-3 w-3" />

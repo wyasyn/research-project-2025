@@ -171,7 +171,7 @@ export function AttendanceManagement({ sessionId }: AttendanceManagementProps) {
                   {presentUsers.map((user) => (
                     <div
                       key={user.id}
-                      className="p-3 bg-green-50 border border-green-100 rounded-md flex items-center"
+                      className="p-3 border rounded-md flex items-center"
                     >
                       <div className="flex-1">
                         <p className="font-medium">{user.name}</p>

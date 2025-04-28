@@ -7,9 +7,6 @@ import {
   FileSpreadsheet,
   FileIcon as FilePdf,
   Search,
-  MoreHorizontal,
-  Edit,
-  Trash2,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,7 +31,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CreateSessionDialog } from "./create";
@@ -140,38 +136,17 @@ export function AttendanceManagement({
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Open menu</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <Button
-                            className="w-full"
-                            variant={"ghost"}
-                            onClick={() =>
-                              router.push(
-                                `/dashboard/supervisor/attendance/${session.id}`
-                              )
-                            }
-                          >
-                            Manage Attendance
-                          </Button>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-destructive">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <Button
+                      className="w-full"
+                      variant={"ghost"}
+                      onClick={() =>
+                        router.push(
+                          `/dashboard/supervisor/attendance/${session.id}`
+                        )
+                      }
+                    >
+                      Manage Attendance
+                    </Button>
                   </TableCell>
                 </TableRow>
               ))}

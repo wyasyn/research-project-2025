@@ -127,7 +127,6 @@ export const searchUser = cache(async (query: string) => {
         "Content-Type": "application/json",
         Authorization: `Bearer ${tokenObj?.value}`,
       },
-      credentials: "include",
     });
 
     if (!response.ok) {

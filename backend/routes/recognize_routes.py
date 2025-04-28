@@ -21,7 +21,7 @@ def _draw_labels(frame: np.ndarray, locs: list, names: list[str]) -> np.ndarray:
     Draw bounding boxes and names on the frame at its native resolution.
     """
     for (top, right, bottom, left), name in zip(locs, names):
-        color = (0, 255, 0) if name != "Unknown" else (0, 0, 255)
+        color = (39, 123, 62) if name != "Unknown" else (89, 14, 195)
         cv2.rectangle(frame, (left, top), (right, bottom), color, 2)
         cv2.rectangle(frame, (left, top - 20), (right, top), color, cv2.FILLED)
         cv2.putText(
