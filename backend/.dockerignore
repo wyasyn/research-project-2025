@@ -38,4 +38,4 @@ tests/
 migrations/
 # __init__.py
 *.sqlite3
-upload/
+uploads/
