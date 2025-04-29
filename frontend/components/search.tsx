@@ -17,8 +17,6 @@ import {
   CommandInput,
   CommandList,
   CommandEmpty,
-  CommandGroup,
-  CommandItem,
 } from "@/components/ui/command";
 import { debounce } from "lodash";
 import { searchUser } from "@/lib/actions/users";
@@ -290,15 +288,6 @@ export default function Search() {
           )}
         </div>
 
-        {/* Debug information */}
-        {query.length > 0 && hasResults && (
-          <div className=" p-2 text-xs">
-            <div>Active Category: {activeCategory}</div>
-            <div>Total Results: {results.length}</div>
-            <div>Filtered Results: {filteredResults.length}</div>
-          </div>
-        )}
-
         {query.length > 0 && hasResults && (
           <div className="border-b">
             <div className="flex items-center gap-2 p-2">
@@ -396,20 +385,18 @@ export default function Search() {
 
           {/* Always render the command group if we have filtered results */}
           {!loading && !error && filteredResults.length > 0 && (
-            <CommandGroup
-              heading={
-                activeCategory === "all"
+            <section>
+              <h2>
+                {activeCategory === "all"
                   ? "All Users"
                   : `${
                       activeCategory.charAt(0).toUpperCase() +
                       activeCategory.slice(1)
-                    }s`
-              }
-            >
+                    }s`}
+              </h2>
               {filteredResults.map((user, index) => (
-                <CommandItem
+                <div
                   key={user.id}
-                  onSelect={() => handleSelectUser(user)}
                   className={cn(
                     "flex items-center gap-3 px-4 py-3",
                     selectedIndex === index && "bg-accent"
@@ -444,9 +431,9 @@ export default function Search() {
                       {user.email}
                     </span>
                   </div>
-                </CommandItem>
+                </div>
               ))}
-            </CommandGroup>
+            </section>
           )}
 
           {query.length > 0 && filteredResults.length > 0 && (
