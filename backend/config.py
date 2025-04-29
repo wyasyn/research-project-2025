@@ -14,7 +14,7 @@ load_dotenv(BASE_DIR / ".env")
 
 
 # 2) Define upload folder as an absolute path
-UPLOAD_FOLDER = BASE_DIR.parent / "uploads"
+UPLOAD_FOLDER = BASE_DIR / "uploads"
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # 3) Extensions (uninitialized)
