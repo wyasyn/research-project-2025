@@ -39,3 +39,10 @@ migrations/
 # __init__.py
 *.sqlite3
 uploads/
+
+# Ignore Docker files
+Dockerfile
+docker-compose.yml
+docker-compose.override.yml
+docker-compose.override.*.yml
+docker-compose.override.*.yml
