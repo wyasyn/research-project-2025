@@ -1,52 +1,20 @@
-from flask import Flask, jsonify
+import os
+from flask import jsonify, current_app
 from flask_migrate import Migrate
-from config import configure_db, configure_jwt, db
-from routes.user_routes import user_bp
-from routes.auth_routes import auth_bp
-from routes.recognize_routes import recognize_bp
-from routes.attendance_routes import attendance_bp
-from routes.stats_routes import stats_bp
-from routes.organization_routes import organization_bp
-from routes.upload import upload_bp
-from flask_cors import CORS
+from config import create_app, db
 
-
-def create_app():
-    app = Flask(__name__)
-
-    # Configure database, jwt and CORS
-    configure_db(app)
-    # configure_cors(app)
-    configure_jwt(app)
-
-    # Register routes
-    app.register_blueprint(user_bp, url_prefix='/users')
-    app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(recognize_bp, url_prefix='/recognize')
-    app.register_blueprint(attendance_bp, url_prefix='/attendance')
-    app.register_blueprint(stats_bp, url_prefix='/stats')
-    app.register_blueprint(organization_bp, url_prefix='/organizations')
-    app.register_blueprint(upload_bp, url_prefix='/upload')
-
-    return app
-
-# Initialize the app
+# Create the Flask app using the factory
 app = create_app()
 
-# Enable CORS
-CORS(app)
-
-# Set up Flask-Migrate
+# Initialize database migrations
 migrate = Migrate(app, db)
 
-# Create tables (only for development, avoid in production)
-with app.app_context():
-    db.create_all()  # Use Flask-Migrate for production migrations
-    
-@app.route("/health", methods=["GET"])
+# Health check endpoint
 def health_check():
     return jsonify({"status": "healthy", "message": "Server is running!"}), 200
+app.add_url_rule('/health', 'health_check', health_check, methods=['GET'])
 
+# Error handlers
 @app.errorhandler(404)
 def page_not_found(e):
     return jsonify({"message": "Page not found", "error": str(e)}), 404
@@ -55,5 +23,10 @@ def page_not_found(e):
 def request_entity_too_large(error):
     return jsonify({"error": "File too large! Max size allowed is 16MB."}), 413
 
+# Serve uploaded files (if not already handled in blueprint)
+@app.route('/uploads/<path:filename>')
+def serve_uploaded(filename):
+    return current_app.send_static_file(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
+
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0")
+    app.run(debug=True, host="0.0.0.0", port=int(os.getenv('FLASK_RUN_PORT', 5000)))

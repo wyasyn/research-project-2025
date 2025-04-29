@@ -6,7 +6,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 import cv2
 import face_recognition
-from config import db
+from config import UPLOAD_FOLDER, db
 from models import User
 
 log = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ def _extract_filename(url: str) -> str:
 def _process_user_face(args):
     """Loads image via cv2, resizes, and encodes face."""
     user_id, image_fname = args
-    file_path = os.path.join('uploads', image_fname)
+    file_path = os.path.join(UPLOAD_FOLDER, image_fname)
     if not os.path.isfile(file_path):
         return user_id, []
 

@@ -2,7 +2,7 @@ from datetime import timedelta
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import jwt_required, get_jwt_identity, create_access_token
 from models import User, Organization
-from config import SECRET_KEY, db
+from config import db
 
 from utils.auth_utils import generate_jwt_tokens
 
