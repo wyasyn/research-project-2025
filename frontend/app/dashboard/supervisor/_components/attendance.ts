@@ -13,7 +13,7 @@ import type {
   WeeklyAttendanceResponse,
 } from "@/types";
 
-const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
+const serverApi = process.env.BACKEND_URL;
 
 export interface LatestAttendanceRecord {
   user_id: number;

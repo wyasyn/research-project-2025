@@ -2,7 +2,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 
-const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
+const serverApi = process.env.BACKEND_URL;
 if (!serverApi) {
   throw new Error("Backend API URL is not defined.");
 }

@@ -51,7 +51,12 @@ def create_app():
     # Initialize extensions
     db.init_app(app)
     jwt.init_app(app)
-    cors.init_app(app, resources={r"/*": {"origins": app.config["CORS_ORIGINS"]}})
+    cors.init_app(app, resources={r"/*": {
+        "origins": app.config["CORS_ORIGINS"],
+        "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization", "Accept"],
+        "supports_credentials": True
+    }})
 
     # Register blueprints (all routes)
     from routes.user_routes import user_bp

@@ -1,54 +1,11 @@
-"use server";
-
 const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
-
-import { v2 as cloudinary, UploadApiResponse } from "cloudinary";
-
-cloudinary.config({
-  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
-
-export const uploadImageToCloudinary = async (imageFile: File) => {
-  if (!imageFile) {
-    return { error: "No file uploaded" };
-  }
-
-  try {
-    const arrayBuffer = await imageFile.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
-    const uploadResult = await new Promise<UploadApiResponse>(
-      (resolve, reject) => {
-        const uploadStream = cloudinary.uploader.upload_stream(
-          { resource_type: "auto" },
-          (error, result) => {
-            if (error) reject(error);
-            else if (result) resolve(result);
-            else reject(new Error("Upload failed"));
-          }
-        );
-        uploadStream.end(buffer);
-      }
-    );
-
-    const { secure_url } = uploadResult;
-
-    if (!secure_url) {
-      return { error: "Failed to upload image" };
-    }
-
-    return { imageUrl: secure_url };
-  } catch (error) {
-    console.error("Error uploading to Cloudinary:", error);
-    return { error: "Error uploading image" };
-  }
-};
-
 export const uploadImage = async (imageFile: File) => {
   if (!imageFile) {
     return { error: "No file uploaded" };
+  }
+
+  if (!serverApi) {
+    return { error: "Backend URL not configured" };
   }
 
   const formData = new FormData();
@@ -58,12 +15,19 @@ export const uploadImage = async (imageFile: File) => {
     const response = await fetch(`${serverApi}/upload/`, {
       method: "POST",
       body: formData,
+      credentials: "include",
+      headers: {
+        // Don't set Content-Type header - it will be set automatically with boundary for multipart/form-data
+        "Accept": "application/json",
+      },
     });
 
-    const data = await response.json();
     if (!response.ok) {
-      throw new Error(data.message || "Unknown upload error");
+      const errorData = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(errorData.message || `Upload failed: ${response.status}`);
     }
+
+    const data = await response.json();
 
     return { imageUrl: data.url };
   } catch (error) {

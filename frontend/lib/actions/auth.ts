@@ -5,7 +5,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
 
-const serverApi = process.env.NEXT_PUBLIC_BACKEND_URL;
+const serverApi = process.env.BACKEND_URL;
 
 if (!serverApi) {
   throw new Error("Backend API URL is not defined.");
