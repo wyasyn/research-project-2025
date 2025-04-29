@@ -3,7 +3,7 @@ FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Install system dependencies needed for dlib, psycopg2, OpenCV, etc.
+# Install only needed build tools
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ cmake \
     libopenblas-dev liblapack-dev \
@@ -17,7 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Install Python dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip && \
-    pip install --prefix=/install -r requirements.txt
+    pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 # Stage 2: Final minimal image
 FROM python:3.12-slim
@@ -27,14 +27,14 @@ ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
-# Install runtime dependencies
+# Install only runtime libraries (no gcc, cmake, etc.)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev liblapack-dev \
     libpq-dev \
     libgl1 \
     libglib2.0-0 \
     netcat-openbsd \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Copy installed Python packages
 COPY --from=builder /install /usr/local
@@ -53,3 +53,8 @@ ENTRYPOINT ["/docker-entrypoint.sh"]
 
 # Default command to run your app
 CMD ["gunicorn", "--bind", "0.0.0.0:5000", "app:app"]
+                                                                                                       
+                                                                                                                                                                    
+                                                                                                                                                                    
+                                                                                                                                                                    
+                                                                                                                                                                    
