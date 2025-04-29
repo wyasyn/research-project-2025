@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev liblapack-dev \
     libpq-dev \
     libgl1 \
+    libglib2.0-0 \
     netcat-openbsd \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
@@ -31,6 +32,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libopenblas-dev liblapack-dev \
     libpq-dev \
     libgl1 \
+    libglib2.0-0 \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
