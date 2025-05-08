@@ -117,7 +117,7 @@ export default function SupervisorsTable({
                 <TableCell>
                   <Avatar>
                     <AvatarImage
-                      src={supervisor.image_url}
+                      src={supervisor.image_url || "/placeholder-image.jpg"}
                       alt={supervisor.name}
                       className="object-cover"
                     />

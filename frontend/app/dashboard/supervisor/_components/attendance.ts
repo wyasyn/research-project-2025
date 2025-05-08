@@ -9,6 +9,7 @@ import { revalidatePath } from "next/cache";
 import type {
   AttendanceSessionDetails,
   SessionAttendanceSummary,
+  SummaryProps,
   UserAttendanceSummary,
   WeeklyAttendanceResponse,
 } from "@/types";
@@ -279,9 +280,7 @@ export async function getSessionDetails(sessionId: number): Promise<{
   }
 }
 
-export async function fetchUsersAttendanceSummary(): Promise<
-  UserAttendanceSummary[]
-> {
+export async function fetchUsersAttendanceSummary(): Promise<SummaryProps[]> {
   const cookieStore = await cookies();
   const tokenObj = cookieStore.get("token");
   if (!tokenObj) {

@@ -108,3 +108,13 @@ export const EditUserSchema = z.object({
   email: z.string().email("Invalid email").optional(),
   image_url: z.string().url("Invalid URL").optional(),
 });
+
+export interface SummaryProps {
+  attendance_percentage: number;
+  attended_sessions: number;
+  email: string;
+  image_url: string;
+  name: string;
+  total_sessions: number;
+  user_id: number;
+}

@@ -1,3 +1,4 @@
+"use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,12 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { UserAttendanceSummary } from "@/types";
 import { useEffect, useState } from "react";
 import { fetchUsersAttendanceSummary } from "../attendance";
+import { SummaryProps } from "@/types";
 
 export function AttendanceByUserTable() {
-  const [data, setData] = useState<UserAttendanceSummary[] | null>(null);
+  const [data, setData] = useState<SummaryProps[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -24,6 +25,7 @@ export function AttendanceByUserTable() {
 
   if (error) return <p className="text-destructive p-3">Error: {error}</p>;
   if (!data) return <p>Loading…</p>;
+
   return (
     <Table>
       <TableHeader>
@@ -37,36 +39,36 @@ export function AttendanceByUserTable() {
       </TableHeader>
       <TableBody>
         {data.map((user) => (
-          <TableRow key={user.user.id}>
+          <TableRow key={user.user_id}>
             <TableCell className="flex items-center gap-2">
               <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={user.user.image || "/placeholder-image.jpg"}
-                  alt={user.user.name}
+                  src={user.image_url || "/placeholder-image.jpg"}
+                  alt={user.name}
                 />
-                <AvatarFallback>{user.user.name.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
-                <div className="font-medium">{user.user.name}</div>
+                <div className="font-medium">{user.name}</div>
                 <div className="text-xs text-muted-foreground">
-                  {user.user.email}
+                  {user.email}
                 </div>
               </div>
             </TableCell>
             <TableCell>{user.total_sessions}</TableCell>
-            <TableCell>{user.sessions_attended}</TableCell>
+            <TableCell>{user.attended_sessions}</TableCell>
 
             <TableCell>
               <Badge
                 variant={
-                  user.attendance_rate >= 80
+                  user.attendance_percentage >= 80
                     ? "default"
-                    : user.attendance_rate >= 60
+                    : user.attendance_percentage >= 60
                     ? "secondary"
                     : "destructive"
                 }
               >
-                {user.attendance_rate}%
+                {user.attendance_percentage}%
               </Badge>
             </TableCell>
           </TableRow>
