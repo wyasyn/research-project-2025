@@ -130,5 +130,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Production run
 
 ```bash
-gunicorn -w 4 -b 0.0.0.0:8000 app:app
+waitress-serve --port=8000 app:app
 ```
