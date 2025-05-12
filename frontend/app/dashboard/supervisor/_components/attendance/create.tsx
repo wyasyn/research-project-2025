@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarIcon, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
+
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -17,12 +17,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
 import {
   Form,
   FormControl,
@@ -31,7 +26,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { cn } from "@/lib/utils";
+
 import { sessionFormSchema, SessionFormValues } from "@/types";
 import { createSession } from "../attendance";
 import { toast } from "sonner";
@@ -145,34 +140,28 @@ export function CreateSessionDialog({
               control={form.control}
               name="date"
               render={({ field }) => (
-                <FormItem className="flex flex-col">
+                <FormItem>
                   <FormLabel>Date</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-full justify-start text-left font-normal",
-                            !field.value && "text-muted-foreground"
-                          )}
-                        >
-                          <CalendarIcon className="mr-2 h-4 w-4" />
-                          {field.value
-                            ? format(field.value, "PPP")
-                            : "Select date"}
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      value={
+                        field.value
+                          ? field.value.toISOString().split("T")[0]
+                          : ""
+                      }
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        // if empty string, clear the field
+                        if (!v) {
+                          field.onChange(undefined);
+                          return;
+                        }
+                        // convert "YYYY-MM-DD" into a Date object
+                        field.onChange(new Date(v));
+                      }}
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

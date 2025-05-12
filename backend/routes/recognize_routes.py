@@ -6,7 +6,7 @@ import time
 import cv2
 import numpy as np
 import face_recognition
-from flask import Blueprint, jsonify, request, Response
+from flask import Blueprint, jsonify, request, Response, stream_with_context
 
 from config import db
 from models import AttendanceSession, AttendanceRecord, User
@@ -151,59 +151,63 @@ def stream(session_id):
     def generate():
         frame_count = 0
         last_locs, last_names = [], []
-        while True:
-            ret, frame = cap.read()
-            if not ret:
-                break
-            frame_count += 1
+        try:
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                frame_count += 1
 
-            # Prepare small frame for detection
-            small = cv2.resize(frame, (320, 240))
-            rgb_small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
+                # Prepare small frame for detection
+                small = cv2.resize(frame, (320, 240))
+                rgb_small = cv2.cvtColor(small, cv2.COLOR_BGR2RGB)
 
-            # Detection & record every skip frames
-            if frame_count % skip == 0:
-                locs = face_recognition.face_locations(rgb_small)
-                encs = face_recognition.face_encodings(rgb_small, locs)
-                names = []
-                for fe in encs:
-                    name = "Unknown"
-                    if known_encs:
-                        dists = face_recognition.face_distance(known_encs, fe)
-                        idx = np.argmin(dists)
-                        if dists[idx] < 0.5:
-                            uid = known_ids[idx]
-                            user = users.get(uid)
-                            if user and uid not in existing:
-                                try:
-                                    rec = AttendanceRecord(session_id=session.id, user_id=uid)
-                                    db.session.add(rec)
-                                    db.session.commit()
-                                    existing.add(uid)
-                                except Exception:
-                                    pass
-                            name = user.name if user else "Unknown"
-                    names.append(name)
-                last_locs, last_names = locs, names
+                # Detection & record every skip frames
+                if frame_count % skip == 0:
+                    locs = face_recognition.face_locations(rgb_small)
+                    encs = face_recognition.face_encodings(rgb_small, locs)
+                    names = []
+                    for fe in encs:
+                        name = "Unknown"
+                        if known_encs:
+                            dists = face_recognition.face_distance(known_encs, fe)
+                            idx = np.argmin(dists)
+                            if dists[idx] < 0.5:
+                                uid = known_ids[idx]
+                                user = users.get(uid)
+                                if user and uid not in existing:
+                                    try:
+                                        rec = AttendanceRecord(session_id=session.id, user_id=uid)
+                                        db.session.add(rec)
+                                        db.session.commit()
+                                        existing.add(uid)
+                                    except Exception:
+                                        log.exception("Failed to record attendance for user %s in session %s", uid, session.id)
+                                
+                                name = user.name if user else "Unknown"
+                        names.append(name)
+                    last_locs, last_names = locs, names
 
-            # Scale locations to full frame
-            h_ratio = frame.shape[0] / 240
-            w_ratio = frame.shape[1] / 320
-            scaled_locs = [(
-                int(top * h_ratio),
-                int(right * w_ratio),
-                int(bottom * h_ratio),
-                int(left * w_ratio)
-            ) for (top, right, bottom, left) in last_locs]
+                # Scale locations to full frame
+                h_ratio = frame.shape[0] / 240
+                w_ratio = frame.shape[1] / 320
+                scaled_locs = [(
+                    int(top * h_ratio),
+                    int(right * w_ratio),
+                    int(bottom * h_ratio),
+                    int(left * w_ratio)
+                ) for (top, right, bottom, left) in last_locs]
 
-            # Draw on full-resolution frame
-            annotated_full = _draw_labels(frame.copy(), scaled_locs, last_names)
+                # Draw on full-resolution frame
+                annotated_full = _draw_labels(frame.copy(), scaled_locs, last_names)
 
-            ret2, jpg = cv2.imencode('.jpg', annotated_full, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
-            if not ret2:
-                continue
-            yield (b'--frame\r\n'
-                   b'Content-Type: image/jpeg\r\n\r\n' + jpg.tobytes() + b'\r\n')
-        cap.release()
+                ret2, jpg = cv2.imencode('.jpg', annotated_full, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
+                if not ret2:
+                    continue
+                yield (b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n\r\n' + jpg.tobytes() + b'\r\n')
+            
+        finally:
+            cap.release()
 
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return Response(stream_with_context(generate()), mimetype='multipart/x-mixed-replace; boundary=frame')

@@ -20,6 +20,7 @@ import { getSessionDetails } from "@/app/dashboard/supervisor/_components/attend
 import { AttendanceRecord } from "@/types";
 import { CameraSelector } from "./camera-selector";
 import AttendanceControl from "./attendance-control";
+import { useRouter } from "next/navigation";
 
 interface User {
   id: number;
@@ -43,6 +44,7 @@ export function AttendanceManagement({ sessionId }: AttendanceManagementProps) {
   const [recognitionActive, setRecognitionActive] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [selectedCameraIndex, setSelectedCameraIndex] = useState(0);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -217,7 +219,10 @@ export function AttendanceManagement({ sessionId }: AttendanceManagementProps) {
                 <Button
                   variant="destructive"
                   className="mt-4 w-full"
-                  onClick={() => setRecognitionActive(false)}
+                  onClick={() => {
+                    setRecognitionActive(false);
+                    router.refresh();
+                  }}
                 >
                   Stop Recognition
                 </Button>
