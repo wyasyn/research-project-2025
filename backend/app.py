@@ -23,10 +23,11 @@ def page_not_found(e):
 def request_entity_too_large(error):
     return jsonify({"error": "File too large! Max size allowed is 16MB."}), 413
 
-# Serve uploaded files (if not already handled in blueprint)
+# Serve uploaded files
 @app.route('/uploads/<path:filename>')
 def serve_uploaded(filename):
     return current_app.send_static_file(os.path.join(current_app.config['UPLOAD_FOLDER'], filename))
 
+# Only run this if executed directly (i.e., development mode)
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=int(os.getenv('FLASK_RUN_PORT', 5000)))

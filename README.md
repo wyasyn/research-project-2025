@@ -126,3 +126,9 @@ Fork the repository and submit a pull request for any improvements or bug fixes.
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Production run
+
+```bash
+gunicorn -w 4 -b 0.0.0.0:8000 app:app
+```
