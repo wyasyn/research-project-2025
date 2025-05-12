@@ -1,0 +1,10 @@
+services:
+  - type: web
+    runtime: python # Specify the runtime, e.g., node, python, etc.
+    name: your-app-name
+    plan: free
+    branch: main
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: PORT
+        value: 5000 # Render will override this automatically
